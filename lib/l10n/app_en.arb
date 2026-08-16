@@ -1,0 +1,267 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "Notification Keeper",
+  "@appTitle": {"description": "The app's name, shown in the OS task switcher etc."},
+
+  "biometricAuthReason": "Verify your identity to open Notification Keeper",
+  "biometricAuthCancelled": "Authentication was cancelled or failed.",
+  "biometricNotEnrolled": "No fingerprint, face, or device PIN enrolled.\nGo to your phone's Settings → Security to add one.",
+  "biometricLockedOut": "Too many failed attempts.\nWait a moment and try again.",
+  "biometricNotAvailable": "Biometric hardware is not available on this device.",
+  "lockedTitle": "LOCKED",
+  "awaitingVerification": "AWAITING VERIFICATION...",
+  "archiveProtectedMessage": "Your notification archive is protected.\nTap the button to unlock.",
+  "retryButton": "RETRY",
+  "tapToUnlock": "TAP TO UNLOCK",
+
+  "recentCodesTitle": "RECENT CODES",
+  "tapToCopy": "Tap to copy",
+  "codeCopied": "Code copied",
+
+  "dashboardTitle": "Dashboard",
+  "dashboardSubtitle": "Your notification overview",
+  "quietHoursActiveBadge": "Active",
+  "quietHoursBadge": "Quiet",
+  "statTotal": "Total",
+  "statToday": "Today",
+  "statThisWeek": "This Week",
+  "statUnread": "Unread",
+  "statCodesToday": "Codes Today",
+  "statPriorityToday": "Priority Today",
+  "weeklyTrend": "Weekly Trend",
+  "activityHeatmap": "Activity Heatmap",
+  "topApps": "Top Apps",
+  "recentSectionTitle": "Recent",
+  "seeAll": "See All",
+  "emptyStateTitle": "No notifications yet",
+  "emptyStateSubtitle": "Notifications will appear here once captured",
+
+  "archiveTitle": "Archive",
+  "searchHint": "Search notifications...",
+  "recentSearches": "Recent Searches",
+  "clearAction": "Clear",
+  "dateGroupToday": "Today",
+  "dateGroupYesterday": "Yesterday",
+  "dateGroupThisWeek": "This Week",
+  "dateGroupThisMonth": "This Month",
+  "dateGroupOlder": "Older",
+  "noNotificationsFound": "No notifications found",
+  "tryDifferentSearchTerm": "Try a different search term",
+  "capturedNotificationsAppearHere": "Captured notifications will appear here",
+  "notificationDeleted": "Notification deleted",
+  "undoAction": "UNDO",
+  "copiedToClipboard": "Copied to clipboard",
+  "filterByDateRange": "Filter by date range",
+
+  "snoozedLabel": "Snoozed",
+  "snoozeTooltip": "Snooze this app",
+  "snooze1Hour": "Snooze for 1 hour",
+  "snooze8Hours": "Snooze for 8 hours",
+  "snooze24Hours": "Snooze for 24 hours",
+  "cancelSnooze": "Cancel snooze",
+  "statStarred": "Starred",
+  "noNotifications": "No notifications",
+
+  "appUnsnoozed": "{appName} unsnoozed",
+  "@appUnsnoozed": {
+    "placeholders": { "appName": { "type": "String" } }
+  },
+  "appSnoozed": "{appName} snoozed",
+  "@appSnoozed": {
+    "placeholders": { "appName": { "type": "String" } }
+  },
+
+  "settingsTitle": "Settings",
+  "sectionAppearance": "Appearance",
+  "themeDark": "Dark",
+  "themeLight": "Light",
+  "themeSystem": "System",
+  "sectionSecurity": "Security",
+  "biometricLockTitle": "Biometric Lock",
+  "biometricLockSubtitleOn": "Fingerprint, face, or device PIN required to open the app",
+  "biometricLockSubtitleOff": "Require authentication before viewing your archive",
+  "sectionQuietHours": "Quiet Hours",
+  "enableQuietHours": "Enable Quiet Hours",
+  "quietHoursSubtitle": "Pause notification capture during set hours",
+  "startTime": "Start Time",
+  "endTime": "End Time",
+  "quietHoursActiveNote": "Quiet hours are currently active — notifications are paused",
+  "captureActiveNote": "Notification capture is active",
+
+  "sectionKeywordRadar": "Keyword Radar",
+  "instantAlertsTitle": "Instant Alerts",
+  "instantAlertsSubtitle": "Notify me immediately when a code or priority keyword is captured",
+  "sectionDataManagement": "Data Management",
+  "clearOldNotificationsTitle": "Clear Old Notifications",
+  "clearOldNotificationsSubtitle": "Remove notifications older than a set period, right now",
+  "automaticCleanupTitle": "Automatic Cleanup",
+  "automaticCleanupOff": "Off — notifications are kept forever",
+  "automaticCleanupOn": "Auto-deletes notifications older than {days} days, checked daily",
+  "@automaticCleanupOn": {
+    "placeholders": { "days": { "type": "int" } }
+  },
+  "exportNotificationsTitle": "Export Notifications",
+  "exportNotificationsSubtitle": "Export all notifications as JSON or CSV",
+  "clearSearchHistoryTitle": "Clear Search History",
+  "clearSearchHistorySubtitle": "Remove all saved search queries",
+  "searchHistoryCleared": "Search history cleared",
+  "deleteAllNotificationsTitle": "Delete All Notifications",
+  "deleteAllNotificationsSubtitle": "Permanently remove all stored notifications",
+  "sectionBackupRestore": "Backup & Restore",
+  "backupNowTitle": "Backup Now",
+  "backupNowSubtitle": "Save everything to a file you can store or share",
+  "restoreFromBackupTitle": "Restore from Backup",
+  "restoreFromBackupSubtitle": "Add notifications and settings from a backup file",
+  "sectionService": "Service",
+  "notificationAccessTitle": "Notification Access",
+  "notificationAccessSubtitle": "Manage notification listener permission",
+  "sectionAbout": "About",
+  "versionLabel": "Version 2.0.0",
+  "featureHeatmap": "Heatmap",
+  "featureTags": "Tags",
+  "featureQuietHours": "Quiet Hours",
+  "featureCopy": "Copy",
+  "featureSearchHistory": "Search History",
+  "featureAppDetails": "App Details",
+  "featureBiometricLock": "Biometric Lock",
+  "featureKeywordRadar": "Keyword Radar",
+  "featureAutoCleanup": "Auto-Cleanup",
+  "featureCodeDetection": "Code Detection",
+  "sectionLanguage": "Language",
+
+  "chooseCleanupPeriod": "Choose how far back to keep notifications.",
+  "keep7Days": "Keep 7 days",
+  "keep30Days": "Keep 30 days",
+  "keep90Days": "Keep 90 days",
+  "cancelAction": "Cancel",
+  "notificationsDeletedCount": "Notifications older than {days} days deleted",
+  "@notificationsDeletedCount": {
+    "placeholders": { "days": { "type": "int" } }
+  },
+  "failedToDeleteNotifications": "Failed to delete notifications",
+  "deleteAllQuestion": "Delete All?",
+  "deleteAllConfirmBody": "This permanently removes every stored notification. This can't be undone.",
+  "allNotificationsDeleted": "All notifications deleted",
+  "failedToDelete": "Failed to delete",
+  "deleteAllAction": "Delete All",
+
+  "backupPassphraseHint": "Optionally protect the backup with a passphrase. Leave blank for an unencrypted file.",
+  "passphraseOptionalLabel": "Passphrase (optional)",
+  "createBackupAction": "Create Backup",
+  "backupFailed": "Backup failed: {error}",
+  "@backupFailed": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "selectBackupFileTitle": "Select a Notification Keeper backup file",
+  "restoreExplanation": "This adds the backup's notifications to your current archive (nothing is removed first). Leave the passphrase blank if this backup wasn't encrypted.",
+  "passphraseIfEncryptedLabel": "Passphrase (if encrypted)",
+  "restoredCount": "Restored {count} {count, plural, =1{notification} other{notifications}}",
+  "@restoredCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "restoreFailedGeneric": "Restore failed",
+  "restoreAction": "Restore",
+
+  "chooseExportFormat": "Choose a format to export and share.",
+  "exportFormatJson": "JSON",
+  "exportFormatCsv": "CSV",
+  "failedToExportNotifications": "Failed to export notifications",
+
+  "automaticCleanupOffToast": "Automatic cleanup turned off",
+  "automaticCleanupOnToast": "Notifications older than {days} days will be auto-deleted daily",
+  "@automaticCleanupOnToast": {
+    "placeholders": { "days": { "type": "int" } }
+  },
+  "automaticCleanupExplanation": "A background task checks daily and permanently deletes notifications older than this.",
+  "cleanupOff": "Off",
+
+  "keywordRadarExplanation": "Notifications containing these words are flagged as priority so you can spot them at a glance.",
+  "keywordHint": "e.g. urgent, invoice",
+  "addAction": "Add",
+
+  "days3Short": "3 days",
+  "days7Short": "7 days",
+  "days30Short": "30 days",
+  "days90Short": "90 days",
+
+  "navAppsLabel": "Apps",
+
+  "appsSearchHint": "Search apps...",
+  "filterAll": "All",
+  "filterMonitored": "Monitored",
+  "filterOff": "Off",
+  "selectAllAction": "Select All",
+  "deselectAllAction": "Deselect All",
+  "noAppsFound": "No apps found",
+
+  "onboardTitle1": "Never Miss a Notification",
+  "onboardDesc1": "Notification Keeper captures and archives every notification you receive, so you can review them anytime.",
+  "onboardTitle2": "Complete History",
+  "onboardDesc2": "Search, filter, and organize your notification history. Find that important message you accidentally dismissed.",
+  "onboardTitle3": "One Permission Needed",
+  "onboardDesc3": "To capture notifications, we need \"Notification Access\" permission. Your data stays on-device and is never shared.",
+  "openSettingsAction": "Open Settings",
+  "iHaveEnabledIt": "I have enabled it",
+  "nextAction": "Next",
+  "skipAction": "Skip",
+
+  "permissionStillNotEnabled": "Notification access isn't showing as enabled yet. Make sure you switched it on for Notification Keeper in the list, then come back.",
+  "checkingPermission": "Checking...",
+
+  "iosNotSupportedTitle": "iOS Not Supported",
+  "iosNotSupportedBody": "iOS does not allow reading notifications from other apps due to system-level restrictions. This feature is only available on Android.",
+
+  "justNow": "Just now",
+  "minutesAgo": "{minutes}m ago",
+  "@minutesAgo": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "hoursAgo": "{hours}h ago",
+  "@hoursAgo": {
+    "placeholders": { "hours": { "type": "int" } }
+  },
+  "daysAgo": "{days}d ago",
+  "@daysAgo": {
+    "placeholders": { "days": { "type": "int" } }
+  },
+  "noTitle": "No Title",
+  "noContent": "No Content",
+  "copiedLabel": "Copied",
+
+  "categoryLabel": "Category: {category}",
+  "@categoryLabel": {
+    "placeholders": { "category": { "type": "String" } }
+  },
+  "tagsLabel": "Tags",
+  "starAction": "Star",
+  "unstarAction": "Unstar",
+  "copyAction": "Copy",
+  "deleteAction": "Delete",
+
+  "tagImportant": "Important",
+  "tagWork": "Work",
+  "tagPersonal": "Personal",
+  "tagShopping": "Shopping",
+  "tagSocial": "Social",
+  "tagNews": "News",
+  "tagFinance": "Finance",
+  "tagTravel": "Travel",
+  "addTagTitle": "Add Tag",
+  "enterTagNameHint": "Enter tag name...",
+  "suggestionsLabel": "Suggestions",
+
+  "heatmapLess": "Less",
+  "heatmapMore": "More",
+  "heatmapPeak": "Peak: {time}",
+  "@heatmapPeak": {
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "heatmapTooltip": "{time}: {count} notifications",
+  "@heatmapTooltip": {
+    "placeholders": {
+      "time": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  }
+}

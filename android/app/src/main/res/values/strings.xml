@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    New feature: native string resources for the home screen widget.
+    Unlike the Flutter app (which uses lib/l10n/*.arb and follows the
+    in-app language the user picks in Settings), a home screen widget is
+    rendered by Android's launcher process outside Flutter's control, so
+    it can only follow the device's system language - that's standard
+    behavior for widgets in general, not specific to this app.
+-->
+<resources>
+    <string name="widget_app_name">Notification Keeper</string>
+    <string name="widget_empty_state">No notifications yet</string>
+</resources>

@@ -1,0 +1,264 @@
+# 🛡️ Notification Keeper
+
+<div align="center">
+
+![Notification Keeper Banner](https://raw.githubusercontent.com/berkelmali/NotificationKeeper/main/assets/logo.png)
+
+**A modern, privacy-first notification management, OTP extraction, and analytics vault for Android.**  
+*Built with Flutter, Kotlin, Room DB, and Material 3 Glassmorphism.*
+
+[![GitHub License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Flutter](https://img.shields.io/badge/Flutter-%3E%3D3.10.7-02569B?logo=flutter)](https://flutter.dev)
+[![Kotlin](https://img.shields.io/badge/Kotlin-Android-7F52FF?logo=kotlin)](https://kotlinlang.org)
+[![Room Database](https://img.shields.io/badge/Storage-Room%20DB%20v6-4285F4?logo=sqlite)](https://developer.android.com/training/data-storage/room)
+[![Security](https://img.shields.io/badge/Security-AES--256%20%2B%20Biometric-10B981)](#-security--privacy-first-architecture)
+[![Localization](https://img.shields.io/badge/Languages-EN%20%7C%20TR-purple)](#-multi-language-support)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/berkelmali/NotificationKeeper/pulls)
+
+[Features](#-key-features) • [Architecture](#-system-architecture) • [Getting Started](#-getting-started) • [Security](#-security--privacy-first-architecture) • [Project Structure](#-project-structure) • [License](#-license)
+
+</div>
+
+---
+
+## 📌 Overview
+
+**Notification Keeper** is an all-in-one notification history, security vault, and analytics application for Android. It seamlessly intercepts and organizes incoming system notifications in the background—ensuring you **never miss an important message, deleted chat, OTP verification code, or time-sensitive alert again**.
+
+Everything runs **100% locally on your device**. No external servers, no tracking, no ads, and no telemetry.
+
+---
+
+## ✨ Key Features
+
+### 🔔 1. Intelligent Background Interception
+- **Native Android Listener**: Hooks directly into Android's `NotificationListenerService` for lightweight, zero-latency background logging without draining battery.
+- **Smart Chat Parser**: Accurately extracts real senders and content from messaging apps (e.g., WhatsApp, Telegram, Signal), filtering out noisy group-summary updates and ongoing system tasks.
+- **Image Attachment Caching**: Automatically saves `BigPictureStyle` notification media (e.g. photos received in messages) to protected app-internal storage with an in-app zoomable viewer.
+
+### 🔢 2. Smart OTP & Verification Code Radar
+- **Instant Code Detection**: Automatically recognizes 4-to-8 digit one-time passwords (OTP), 2FA tokens, and SMS verification codes using regex intelligence.
+- **Recent Codes Ribbon**: Displays captured codes at the top of the archive for 1-tap clipboard copying.
+- **Auto-Masking Privacy**: Masked previews hide sensitive codes after copying to protect your privacy from shoulder surfers.
+
+### 📡 3. Keyword Radar & Instant Alerts
+- **Priority Keyword Engine**: Define custom keywords (e.g., `urgent`, `bank`, `security`, `code`, `transfer`).
+- **Instant Local Alerts**: Receive prioritized heads-up notifications whenever high-priority keywords or OTP codes are intercepted.
+
+### 🔐 4. Biometric Security Vault
+- **App Lock**: Protect your sensitive notification history using Fingerprint, Face Unlock, or Device PIN (`BiometricPrompt` & `local_auth`).
+- **Configurable Protection**: Toggle security on/off directly from Settings.
+
+### 📊 5. Comprehensive Analytics & Heatmap
+- **Activity Heatmap**: 24-hour visual intensity grid illustrating peak notification traffic.
+- **Weekly Trends & Charts**: Interactive bar charts powered by `fl_chart`.
+- **Key Metrics**: Real-time counters for Total, Today, Weekly, Unread, OTP Codes, Priority Alerts, and Quiet Hours filters.
+- **App Breakdown**: View and rank which apps generate the most notifications.
+
+### 🔍 6. Advanced Search, Filters & Organization
+- **Full-Text Search**: Instant search across titles, message content, senders, and tags.
+- **Date Range Picker**: Filter logs between specific start and end calendar dates.
+- **Multi-Tag System**: Add custom color-coded tags (`Important`, `Work`, `Personal`, `Finance`, `Social`, etc.).
+- **Starred Items**: Star critical notifications for quick bookmark access.
+- **Chronological Grouping**: Clean grouping by Today, Yesterday, This Week, This Month, and Older.
+
+### ⏳ 7. Granular App Controls & Quiet Hours
+- **Per-App Monitoring**: Selectively enable or disable notification recording for specific apps.
+- **Per-App Temporary Snooze**: Snooze logging for specific noisy apps for 1 hour, 8 hours, or 24 hours.
+- **Quiet Hours (Do Not Disturb)**: Schedule quiet windows where notifications are tracked quietly without triggering instant alert popups.
+
+### 🧹 8. Automated Data Hygiene & Retention
+- **WorkManager Auto-Cleanup**: Set automated background retention policies (Keep Forever, 7, 14, 30, or 90 days).
+- **Orphan File Cleanup**: Automatically purges obsolete image attachments when older notification records expire.
+
+### 💾 9. Backup, Restore & Export
+- **Encrypted Round-Trip Backups**: Export your entire archive, settings, and keyword radar to a portable `.nkbackup` file.
+- **AES-256-CBC Encryption**: Secure your backup with optional password-based encryption.
+- **Data Export**: Export notification records to **CSV** or **JSON** for external audits or spreadsheets.
+
+### 📱 10. Native Home Screen Widget
+- **Launcher Widget**: Native Android AppWidget (`NotificationWidgetProvider`) displaying the 4 most recent notifications right on your home screen with real-time updates.
+
+### 🌐 11. Multi-Language Support & Glassmorphic UI
+- **Languages**: Full localization for English (`en`) and Turkish (`tr`).
+- **Modern Design**: Ultra-sleek dark and light themes, subtle gradients, Glassmorphic cards, Shimmer loaders, and edge-to-edge layout.
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+flowchart TD
+    subgraph Android Native [Android Native Layer - Kotlin]
+        NLS[NotificationListenerService] -->|Intercepts System StatusBar| NLS
+        NLS -->|OTP & Keyword Parser| NLS
+        NLS -->|Cache Images| FS[(Internal Storage)]
+        NLS -->|Persist Records| ROOM[(Room DB SQLite v6)]
+        
+        WM[WorkManager RetentionWorker] -->|Daily Auto-Clean| ROOM
+        WM -->|Delete Expired Media| FS
+        
+        WIDGET[AppWidgetProvider] <-->|Display Recent 4| ROOM
+        
+        MC[MethodChannel Bridge] <-->|CRUD & Preferences| ROOM
+    end
+
+    subgraph Flutter Layer [Flutter Presentation Layer - Dart]
+        MC <--> REPO[NotificationRepository]
+        REPO <--> BACKUP[BackupService: AES-256 / JSON]
+        
+        REPO --> NP[NotificationProvider]
+        REPO --> AP[AppListProvider]
+        REPO --> SP[SettingsProvider]
+        REPO --> STP[StatsProvider]
+        
+        GUARD{Biometric Vault} -->|Authenticated| UI[Material 3 Glassmorphic UI]
+        GUARD -->|Locked| LOCK[BiometricLockScreen]
+        
+        UI --> DASH[Dashboard Screen]
+        UI --> ARCH[Archive & Search Screen]
+        UI --> APPS[Apps Management Screen]
+        UI --> SETT[Settings & Security Screen]
+    end
+```
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technologies / Packages |
+|---|---|
+| **Framework** | [Flutter](https://flutter.dev) (Dart SDK `^3.10.7`) |
+| **Native Android** | Kotlin, Android SDK 34, `NotificationListenerService`, `AppWidgetProvider` |
+| **Local Database** | Native Android **Room ORM** (v6 schema migration pipeline) |
+| **Background Tasks** | Android Jetpack **WorkManager** (`androidx.work:work-runtime-ktx`) |
+| **State Management** | [Provider](https://pub.dev/packages/provider) (`^6.1.5`) |
+| **Security & Auth** | [local_auth](https://pub.dev/packages/local_auth), [encrypt](https://pub.dev/packages/encrypt) (AES-256), [crypto](https://pub.dev/packages/crypto) (SHA-256) |
+| **Charts & Visuals** | [fl_chart](https://pub.dev/packages/fl_chart), [shimmer](https://pub.dev/packages/shimmer), [google_fonts](https://pub.dev/packages/google_fonts) |
+| **Localization** | `flutter_localizations`, ARB generation (`app_en.arb`, `app_tr.arb`) |
+| **File I/O & Sharing** | [file_picker](https://pub.dev/packages/file_picker), [share_plus](https://pub.dev/packages/share_plus), [path_provider](https://pub.dev/packages/path_provider) |
+
+---
+
+## 🔒 Security & Privacy-First Architecture
+
+1. **Zero Cloud Dependencies**: The app operates completely offline. No tracking SDKs, no analytics endpoints, no third-party ads.
+2. **Encrypted Backups**: Backup files (`.nkbackup`) can be encrypted with AES-256-CBC using an encryption key derived via SHA-256 from your personal passphrase.
+3. **Biometric Guard**: Biometric authentication uses Android's native `BiometricPrompt` via `FlutterFragmentActivity`, ensuring cryptographic biometric verification with device PIN fallback.
+4. **Sandboxed Media**: Cached notification images are stored in `context.filesDir/notification_images/`—isolated from the public gallery and invisible to other apps.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- [Flutter SDK](https://docs.flutter.dev/get-started/install) (3.10.7 or higher)
+- [Android Studio](https://developer.android.com/studio) / Android SDK (API Level 21+ / Target SDK 34)
+- Java Development Kit (JDK 17 recommended)
+
+### Installation & Run
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/berkelmali/NotificationKeeper.git
+   cd NotificationKeeper
+   ```
+
+2. **Install Flutter dependencies:**
+   ```bash
+   flutter pub get
+   ```
+
+3. **Generate Localization files (if needed):**
+   ```bash
+   flutter gen-l10n
+   ```
+
+4. **Connect an Android device or emulator and run:**
+   ```bash
+   flutter run
+   ```
+
+5. **Build Release APK:**
+   ```bash
+   flutter build apk --release
+   ```
+
+### ⚙️ Granting Notification Access
+Upon first launch:
+1. Tap **Enable Permission** on the welcome screen.
+2. Android will open the **Device & App Notifications** settings screen.
+3. Find **Notification Keeper** in the list and toggle the switch **ON**.
+4. Return to the app and start tracking your notifications!
+
+---
+
+## 📁 Project Structure
+
+```
+NotificationKeeper/
+├── android/
+│   └── app/src/main/
+│       ├── AndroidManifest.xml
+│       ├── kotlin/com/example/notification_keeper/
+│       │   ├── app/MainActivity.kt                # Platform MethodChannel handler
+│       │   ├── data/
+│       │   │   ├── database/AppDatabase.kt         # Room DB instance & migration v1-v6
+│       │   │   ├── dao/NotificationDao.kt          # SQLite Data Access Object
+│       │   │   └── entity/NotificationEntity.kt    # Notification & Preference entities
+│       │   ├── service/NotificationListener.kt     # Background notification interceptor
+│       │   ├── widget/NotificationWidgetProvider.kt# Android Home Screen Widget
+│       │   └── worker/RetentionWorker.kt          # WorkManager daily cleanup job
+│       └── res/                                    # Widget layouts, icons & XML strings
+├── lib/
+│   ├── data/
+│   │   ├── repositories/notification_repository.dart# MethodChannel communication bridge
+│   │   └── services/backup_service.dart            # AES-256 backup & restore logic
+│   ├── domain/
+│   │   └── models/                                 # Notification, AppInfo & Stats models
+│   ├── l10n/
+│   │   ├── app_en.arb                              # English localization template
+│   │   └── app_tr.arb                              # Turkish localization
+│   ├── presentation/
+│   │   ├── providers/                              # State management (Provider)
+│   │   ├── screens/                                # UI Screens (Dashboard, Archive, Settings, etc.)
+│   │   ├── theme/                                  # AppTheme & AppColors design tokens
+│   │   └── widgets/                                # GlassCard, Heatmap, OTP Ribbon, etc.
+│   └── main.dart                                   # App entrypoint & theme initialization
+├── test/                                           # Automated unit and widget tests
+├── pubspec.yaml                                    # Dependencies & asset declarations
+├── LICENSE                                         # MIT License
+└── README.md                                       # Project documentation
+```
+
+---
+
+## 🧪 Testing
+
+Run all unit and widget tests with:
+
+```bash
+flutter test
+```
+
+Test suite includes:
+- **`notification_model_test.dart`**: Model deserialization, copyWith, tags, OTP flags.
+- **`backup_service_test.dart`**: AES-256 encryption & decryption round-trip, invalid passphrase rejection, corruption handling.
+- **`settings_provider_test.dart`**: SharedPreferences persistence for retention days, keyword radar, and biometric flags.
+- **`recent_codes_widget_test.dart`**: OTP filtering, copy-to-clipboard actions, and auto-masking timer.
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+```
+Copyright (c) 2026 Berk Elmalı
+```
+
+---
+
+<div align="center">
+Made with ❤️ by <a href="https://github.com/berkelmali">Berk Elmalı</a>
+</div>

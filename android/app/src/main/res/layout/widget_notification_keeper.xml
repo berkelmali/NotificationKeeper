@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    New feature: home screen widget layout.
+    RemoteViews only supports a limited set of views (no custom widgets, no
+    arbitrary interactivity) - kept deliberately simple: a header + up to 4
+    static rows showing the most recent captured notifications. Tapping
+    anywhere opens the app.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="6dp">
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@mipmap/ic_launcher"
+            android:layout_marginEnd="6dp" />
+
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/widget_app_name"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/widget_row_1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#E0E0E0"
+        android:textSize="12sp"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:paddingTop="3dp"
+        android:paddingBottom="3dp" />
+
+    <TextView
+        android:id="@+id/widget_row_2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#E0E0E0"
+        android:textSize="12sp"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:paddingTop="3dp"
+        android:paddingBottom="3dp" />
+
+    <TextView
+        android:id="@+id/widget_row_3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#E0E0E0"
+        android:textSize="12sp"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:paddingTop="3dp"
+        android:paddingBottom="3dp" />
+
+    <TextView
+        android:id="@+id/widget_row_4"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#E0E0E0"
+        android:textSize="12sp"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:paddingTop="3dp"
+        android:paddingBottom="3dp" />
+
+    <TextView
+        android:id="@+id/widget_empty_state"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_empty_state"
+        android:textColor="#8A8A9E"
+        android:textSize="12sp"
+        android:visibility="gone" />
+</LinearLayout>
