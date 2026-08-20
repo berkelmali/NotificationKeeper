@@ -9,7 +9,7 @@ class NotificationProvider extends ChangeNotifier {
   bool _isLoading = false;
   String _searchQuery = '';
   String? _selectedApp;
-  String _filterMode = 'all'; // all, starred, unread, tagged
+  String _filterMode = 'all'; // all, starred, unread, tagged, recalled
   String? _selectedTag;
 
   // New feature: date-range filtering (complements text search)
@@ -51,6 +51,15 @@ class NotificationProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      // New feature B: shred anything that expired since the last worker tick
+      // *before* reading, so an out-of-date code is never drawn on screen even
+      // for a frame. Cheap no-op while the shredder is off, and never allowed
+      // to take the archive down with it if the platform call fails.
+      try {
+        await _repository.shredExpiredCodesNow();
+      } catch (e) {
+        print("Shred pass skipped: $e");
+      }
       _allNotifications = await _repository.getAllNotifications();
       _applyFilters();
     } catch (e) {
@@ -178,6 +187,9 @@ class NotificationProvider extends ChangeNotifier {
       filtered = filtered.where((n) => !n.isRead).toList();
     } else if (_filterMode == 'tagged') {
       filtered = filtered.where((n) => n.tagList.isNotEmpty).toList();
+    } else if (_filterMode == 'recalled') {
+      // New feature A: only messages their sender tried to take back
+      filtered = filtered.where((n) => n.isRecalled).toList();
     }
 
     // Filter by specific tag

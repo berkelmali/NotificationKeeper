@@ -158,4 +158,47 @@ void main() {
       expect(reloaded.appLocale, isNull);
     });
   });
+
+  group('Code Shredder (new feature B)', () {
+    test('defaults to 0 (keep codes) - destroying data is never the default '
+        'for an existing user who never asked for it', () async {
+      final settings = SettingsProvider();
+      await settings.loadSettings();
+      expect(settings.otpShredMinutes, 0);
+    });
+
+    test('setOtpShredMinutes persists the chosen window across a restart', () async {
+      final settings = SettingsProvider();
+      await settings.loadSettings();
+
+      await settings.setOtpShredMinutes(15);
+      expect(settings.otpShredMinutes, 15);
+
+      final reloaded = SettingsProvider();
+      await reloaded.loadSettings();
+      expect(reloaded.otpShredMinutes, 15);
+    });
+
+    test('can be switched back off again', () async {
+      final settings = SettingsProvider();
+      await settings.loadSettings();
+      await settings.setOtpShredMinutes(60);
+      await settings.setOtpShredMinutes(0);
+
+      final reloaded = SettingsProvider();
+      await reloaded.loadSettings();
+      expect(reloaded.otpShredMinutes, 0);
+    });
+
+    test('notifies listeners so the settings card redraws immediately', () async {
+      final settings = SettingsProvider();
+      await settings.loadSettings();
+
+      var notified = 0;
+      settings.addListener(() => notified++);
+      await settings.setOtpShredMinutes(5);
+
+      expect(notified, greaterThan(0));
+    });
+  });
 }

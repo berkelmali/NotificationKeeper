@@ -159,6 +159,56 @@ class SettingsScreen extends StatelessWidget {
                 );
               },
             ),
+            const SizedBox(height: 12),
+
+            // ─── New feature B: Code Shredder (ephemeral verification codes) ───
+            Consumer<SettingsProvider>(
+              builder: (context, settings, _) {
+                final isOn = settings.otpShredMinutes > 0;
+                return GlassCard(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isOn
+                                ? AppColors.error.withValues(alpha: 0.15)
+                                : (isDark ? AppColors.surfaceLight : AppColors.cardLight),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.local_fire_department_rounded,
+                            color: isOn ? AppColors.error : AppColors.textTertiary,
+                            size: 20,
+                          ),
+                        ),
+                        title: Text(l10n.codeShredTitle),
+                        subtitle: Text(
+                          isOn
+                              ? _shredWindowLabel(l10n, settings.otpShredMinutes)
+                              : l10n.codeShredSubtitle,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () => _showShredWindowDialog(context, settings, repo),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        child: Text(
+                          l10n.codeShredExplainer,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppColors.textTertiary,
+                                height: 1.5,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: 24),
 
             // ─── Feature 5 (Clone from Notisave): Quiet Hours ───
@@ -191,12 +241,30 @@ class SettingsScreen extends StatelessWidget {
                         title: Text(l10n.enableQuietHours),
                         subtitle: Text(
                           settings.quietHoursEnabled
-                              ? 'Active: ${_formatTime(settings.quietHoursStart)} - ${_formatTime(settings.quietHoursEnd)}'
+                              ? l10n.quietHoursActiveRange(
+                                  _formatTime(settings.quietHoursStart),
+                                  _formatTime(settings.quietHoursEnd),
+                                )
                               : l10n.quietHoursSubtitle,
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         value: settings.quietHoursEnabled,
-                        onChanged: (value) => settings.setQuietHoursEnabled(value),
+                        // BUG FIX: the toggle only ever wrote to Flutter's own
+                        // SharedPreferences - the native listener reads a
+                        // different store and was only ever updated by the two
+                        // time pickers below. Turning Quiet Hours on (or off)
+                        // without also touching a time therefore did nothing at
+                        // all natively. Push the whole window here too.
+                        onChanged: (value) {
+                          settings.setQuietHoursEnabled(value);
+                          repo.setQuietHours(
+                            value,
+                            settings.quietHoursStart.hour,
+                            settings.quietHoursStart.minute,
+                            settings.quietHoursEnd.hour,
+                            settings.quietHoursEnd.minute,
+                          );
+                        },
                       ),
                       if (settings.quietHoursEnabled) ...[
                         Divider(
@@ -911,6 +979,54 @@ class SettingsScreen extends StatelessWidget {
           TextButton(onPressed: () => apply(30), child: Text(l10n.days30Short)),
           TextButton(onPressed: () => apply(90), child: Text(l10n.days90Short)),
           TextButton(onPressed: () => apply(0), child: Text(l10n.cleanupOff)),
+        ],
+      ),
+    );
+  }
+
+  /// New feature B: Code Shredder. Human label for the currently selected window.
+  String _shredWindowLabel(AppLocalizations l10n, int minutes) {
+    if (minutes <= 0) return l10n.codeShredOff;
+    if (minutes >= 1440) return l10n.codeShredDay;
+    if (minutes >= 60) return l10n.codeShredHour;
+    return l10n.codeShredMinutes(minutes);
+  }
+
+  /// New feature B: how long a captured verification code may survive before
+  /// its digits are destroyed. 0 keeps codes forever (the old behavior).
+  void _showShredWindowDialog(
+      BuildContext context, SettingsProvider settings, NotificationRepository repo) {
+    final l10n = AppLocalizations.of(context)!;
+
+    Future<void> apply(int minutes) async {
+      Navigator.pop(context);
+      await settings.setOtpShredMinutes(minutes);
+      // The native side wipes anything that is already past the new window and
+      // reports how much it destroyed, so shortening the window has a visible,
+      // immediate effect rather than waiting for the next worker tick.
+      final shredded = await repo.setOtpShredMinutes(minutes);
+      if (context.mounted && shredded > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.codeShredDone(shredded))),
+        );
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? AppColors.surfaceDark
+            : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(l10n.codeShredTitle),
+        content: Text(l10n.codeShredExplainer),
+        actions: [
+          TextButton(onPressed: () => apply(5), child: Text(l10n.codeShredMinutes(5))),
+          TextButton(onPressed: () => apply(15), child: Text(l10n.codeShredMinutes(15))),
+          TextButton(onPressed: () => apply(60), child: Text(l10n.codeShredHour)),
+          TextButton(onPressed: () => apply(1440), child: Text(l10n.codeShredDay)),
+          TextButton(onPressed: () => apply(0), child: Text(l10n.codeShredOff)),
         ],
       ),
     );

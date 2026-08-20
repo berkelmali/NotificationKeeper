@@ -124,6 +124,55 @@ class NotificationCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
+                // New feature A: this message was taken back by its sender.
+                // The row is the whole point of the app, so it gets a proper
+                // banner rather than a small badge among the others.
+                if (notification.isRecalled) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.undo_rounded,
+                        size: 13,
+                        color: AppColors.warning,
+                      ),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          l10n.recalledBadge,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                            color: AppColors.warning,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                // New feature B: the code that lived here has been destroyed.
+                if (notification.codeShredded) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.local_fire_department_rounded,
+                        size: 13,
+                        color: AppColors.textTertiary,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        l10n.codeShreddedLabel,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textTertiary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 // New feature: image attachment thumbnail
                 if (notification.imagePath != null) ...[
                   const SizedBox(height: 8),

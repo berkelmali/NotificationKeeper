@@ -15,6 +15,8 @@ import kotlinx.coroutines.withContext
 import com.example.notification_keeper.data.database.AppDatabase
 import com.example.notification_keeper.data.entity.AppPreferenceEntity
 import com.example.notification_keeper.data.entity.NotificationEntity
+import com.example.notification_keeper.worker.CodeShredWorker
+import com.example.notification_keeper.worker.CodeShredder
 import com.example.notification_keeper.worker.RetentionWorker
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -50,6 +52,25 @@ class MainActivity: FlutterFragmentActivity() {
             ExistingPeriodicWorkPolicy.KEEP,
             retentionRequest
         )
+
+        // New feature B: Code Shredder. 15 minutes is WorkManager's minimum
+        // periodic interval; the worker is a no-op while the feature is off.
+        val shredRequest = PeriodicWorkRequestBuilder<CodeShredWorker>(15, TimeUnit.MINUTES).build()
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            CodeShredder.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            shredRequest
+        )
+
+        // ...and run one pass right now, so a code that expired while the app
+        // was closed is already gone by the time the archive is drawn.
+        scope.launch(Dispatchers.IO) {
+            try {
+                CodeShredder.shredExpired(applicationContext)
+            } catch (e: Exception) {
+                // Non-fatal: the periodic worker will retry.
+            }
+        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -162,9 +183,21 @@ class MainActivity: FlutterFragmentActivity() {
                             // (feeds the expanded stats dashboard - see merge changelog, feature #9)
                             val otpCount = todayNotifications.count { it.isOtp }
                             val priorityCount = todayNotifications.count { it.isPriorityFlagged }
-                            val quietHoursSkippedToday = getSharedPreferences("notification_keeper_prefs", MODE_PRIVATE)
-                                .getInt("quiet_hours_skipped_today", 0)
-                            
+
+                            // BUG FIX: the counter is stored together with the day it
+                            // belongs to, but the read side ignored that day, so
+                            // yesterday's number kept showing as "today" until the next
+                            // Quiet Hours capture happened to overwrite it.
+                            val prefs = getSharedPreferences("notification_keeper_prefs", MODE_PRIVATE)
+                            val storedDay = prefs.getInt("quiet_hours_skipped_day", -1)
+                            val quietHoursCapturedToday =
+                                if (storedDay == Calendar.getInstance().get(Calendar.DAY_OF_YEAR)) {
+                                    prefs.getInt("quiet_hours_skipped_today", 0)
+                                } else 0
+
+                            // New feature A: how many messages were withdrawn today
+                            val recalledTodayCount = dao.getRecalledCountSince(todayCal.timeInMillis)
+
                             val statsMap = mapOf(
                                 "totalCount" to totalCount,
                                 "todayCount" to todayCount,
@@ -174,7 +207,8 @@ class MainActivity: FlutterFragmentActivity() {
                                 "hourlyCounts" to hourlyCounts,
                                 "otpCountToday" to otpCount,
                                 "priorityCountToday" to priorityCount,
-                                "quietHoursSkippedToday" to quietHoursSkippedToday
+                                "quietHoursSkippedToday" to quietHoursCapturedToday,
+                                "recalledTodayCount" to recalledTodayCount
                             )
                             
                             withContext(Dispatchers.Main) {
@@ -193,6 +227,10 @@ class MainActivity: FlutterFragmentActivity() {
                         scope.launch(Dispatchers.IO) {
                             try {
                                 val db = AppDatabase.getDatabase(applicationContext)
+                                // BUG FIX: deleting a single row left its cached image
+                                // file behind forever - only bulk deletes cleaned up.
+                                db.notificationDao().getById(id)?.imagePath
+                                    ?.let { path -> try { File(path).delete() } catch (e: Exception) {} }
                                 db.notificationDao().deleteById(id)
                                 withContext(Dispatchers.Main) {
                                     result.success(true)
@@ -348,12 +386,13 @@ class MainActivity: FlutterFragmentActivity() {
                             if (format == "csv") {
                                 file = File(applicationContext.cacheDir, "notifications_export.csv")
                                 file.bufferedWriter().use { writer ->
-                                    writer.write("id,packageName,title,content,subText,timestamp,category,isOtp,extractedCode,isPriorityFlagged,tags\n")
+                                    writer.write("id,packageName,title,content,subText,timestamp,category,isOtp,extractedCode,isPriorityFlagged,tags,recalledAt,codeShredded\n")
                                     notifications.forEach { n ->
                                         writer.write(listOf(
                                             n.id, csvEscape(n.packageName), csvEscape(n.title), csvEscape(n.content),
                                             csvEscape(n.subText), n.timestamp, csvEscape(n.category),
-                                            n.isOtp, csvEscape(n.extractedCode), n.isPriorityFlagged, csvEscape(n.tags)
+                                            n.isOtp, csvEscape(n.extractedCode), n.isPriorityFlagged, csvEscape(n.tags),
+                                            n.recalledAt ?: "", n.codeShredded
                                         ).joinToString(",") + "\n")
                                     }
                                 }
@@ -523,6 +562,38 @@ class MainActivity: FlutterFragmentActivity() {
                     val prefs = getSharedPreferences("notification_keeper_prefs", MODE_PRIVATE)
                     result.success(prefs.getBoolean("instant_alerts_enabled", true))
                 }
+                // --- New feature B: Code Shredder ---
+                "setOtpShredMinutes" -> {
+                    val minutes = call.argument<Number>("minutes")?.toInt() ?: 0
+                    val prefs = getSharedPreferences("notification_keeper_prefs", MODE_PRIVATE)
+                    prefs.edit().putInt(CodeShredder.PREF_KEY, minutes).apply()
+                    // Apply the new (possibly shorter) window immediately instead of
+                    // waiting up to 15 minutes for the next worker tick.
+                    scope.launch(Dispatchers.IO) {
+                        val shredded = try {
+                            CodeShredder.shredExpired(applicationContext)
+                        } catch (e: Exception) {
+                            0
+                        }
+                        withContext(Dispatchers.Main) { result.success(shredded) }
+                    }
+                }
+                "getOtpShredMinutes" -> {
+                    val prefs = getSharedPreferences("notification_keeper_prefs", MODE_PRIVATE)
+                    result.success(prefs.getInt(CodeShredder.PREF_KEY, 0))
+                }
+                "shredExpiredCodesNow" -> {
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            val shredded = CodeShredder.shredExpired(applicationContext)
+                            withContext(Dispatchers.Main) { result.success(shredded) }
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                result.error("SHRED_ERROR", e.message, null)
+                            }
+                        }
+                    }
+                }
                 // --- New feature #1: date-range aware search ---
                 "searchWithDateRange" -> {
                     val query = call.argument<String>("query") ?: ""
@@ -573,9 +644,11 @@ class MainActivity: FlutterFragmentActivity() {
                                         tags = m["tags"] as? String,
                                         isOtp = m["isOtp"] as? Boolean ?: false,
                                         extractedCode = m["extractedCode"] as? String,
-                                        isPriorityFlagged = m["isPriorityFlagged"] as? Boolean ?: false
+                                        isPriorityFlagged = m["isPriorityFlagged"] as? Boolean ?: false,
                                         // imagePath deliberately not restored - the actual
                                         // image files aren't part of the backup (see changelog)
+                                        recalledAt = (m["recalledAt"] as? Number)?.toLong(),
+                                        codeShredded = m["codeShredded"] as? Boolean ?: false
                                     )
                                 }
                                 db.notificationDao().insertAll(entities)
@@ -624,7 +697,9 @@ class MainActivity: FlutterFragmentActivity() {
             "isOtp" to isOtp,
             "extractedCode" to extractedCode,
             "isPriorityFlagged" to isPriorityFlagged,
-            "imagePath" to imagePath
+            "imagePath" to imagePath,
+            "recalledAt" to recalledAt,
+            "codeShredded" to codeShredded
         )
     }
 }

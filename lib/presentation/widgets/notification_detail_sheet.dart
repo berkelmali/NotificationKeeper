@@ -117,6 +117,60 @@ class NotificationDetailSheet extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
 
+                // New feature A: Recall Radar. Explained in full here rather
+                // than as a bare badge - "the sender deleted this" is a claim
+                // worth spelling out, including that it is an inference.
+                if (notification.isRecalled) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.warning.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.undo_rounded,
+                                size: 16, color: AppColors.warning),
+                            const SizedBox(width: 8),
+                            Text(
+                              l10n.recalledBadge,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                                color: AppColors.warning,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              l10n.recalledAtLabel(
+                                DateFormat.Hm(Localizations.localeOf(context).toString())
+                                    .format(DateTime.fromMillisecondsSinceEpoch(
+                                        notification.recalledAt!)),
+                              ),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          l10n.recalledExplanation,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                height: 1.5,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
                 // Title
                 if (notification.title != null) ...[
                   Text(

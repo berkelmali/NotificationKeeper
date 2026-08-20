@@ -9,7 +9,11 @@ class StatsModel {
   // ─── Merged from base.apk (com.example.fluter) ───
   final int otpCountToday;
   final int priorityCountToday;
+  /// Notifications captured quietly (stored, alert withheld) during Quiet Hours today.
   final int quietHoursSkippedToday;
+
+  /// New feature A: messages withdrawn by their sender today.
+  final int recalledTodayCount;
 
   StatsModel({
     required this.totalCount,
@@ -21,6 +25,7 @@ class StatsModel {
     this.otpCountToday = 0,
     this.priorityCountToday = 0,
     this.quietHoursSkippedToday = 0,
+    this.recalledTodayCount = 0,
   });
 
   String get topApp {

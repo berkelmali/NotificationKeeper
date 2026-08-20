@@ -1,13 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    New feature: native string resources for the home screen widget.
-    Unlike the Flutter app (which uses lib/l10n/*.arb and follows the
-    in-app language the user picks in Settings), a home screen widget is
-    rendered by Android's launcher process outside Flutter's control, so
-    it can only follow the device's system language - that's standard
-    behavior for widgets in general, not specific to this app.
+    New feature: native string resources for the home screen widget and for the
+    notifications this app posts itself (instant alerts, recall alerts).
+
+    Unlike the Flutter app (which uses lib/l10n/*.arb and follows the in-app
+    language the user picks in Settings), a home screen widget is rendered by
+    Android's launcher process outside Flutter's control, and the listener
+    service posts alerts while Flutter may not even be running - so both can
+    only follow the device's system language. That's standard behavior for
+    widgets and background services in general, not specific to this app.
 -->
 <resources>
     <string name="widget_app_name">Notification Keeper</string>
     <string name="widget_empty_state">No notifications yet</string>
+
+    <!-- Instant alerts posted by NotificationListener -->
+    <string name="alert_channel_name">Instant Alerts</string>
+    <string name="alert_channel_description">Immediate alerts when a verification code or priority keyword is captured</string>
+    <string name="alert_code_title">Code captured</string>
+    <string name="alert_code_body">%1$s — tap to view</string>
+    <string name="alert_priority_title">Priority notification</string>
+    <string name="alert_fallback_body">Tap to view in Notification Keeper</string>
+
+    <!-- New feature A: Recall Radar -->
+    <string name="recall_alert_title">A message was withdrawn</string>
+    <string name="recall_alert_body">%1$s deleted a message — it is still in your archive</string>
+    <string name="recall_alert_body_generic">A message was deleted — it is still in your archive</string>
 </resources>

@@ -67,7 +67,10 @@ class _AppsScreenState extends State<AppsScreen>
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '${provider.monitoredCount} / ${provider.totalCount} monitored',
+                          // BUG FIX: was hardcoded English despite the app
+                          // supporting Turkish.
+                          l10n.appsMonitoredCount(
+                              provider.monitoredCount, provider.totalCount),
                           style: const TextStyle(
                             color: AppColors.primaryStart,
                             fontSize: 12,

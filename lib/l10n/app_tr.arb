@@ -220,5 +220,27 @@
   "heatmapLess": "Az",
   "heatmapMore": "Çok",
   "heatmapPeak": "Zirve: {time}",
-  "heatmapTooltip": "{time}: {count} bildirim"
+  "heatmapTooltip": "{time}: {count} bildirim",
+
+  "filterTagged": "Etiketli",
+  "appsMonitoredCount": "{monitored} / {total} izleniyor",
+  "quietHoursActiveRange": "Etkin: {start} - {end}",
+  "quietHoursCapturedToday": "Bugün sessiz saatlerde {count} bildirim sessizce kaydedildi",
+
+  "filterRecalled": "Geri çekilen",
+  "statRecalled": "Geri çekilen",
+  "recalledBadge": "Geri çekildi",
+  "recalledExplanation": "Gönderen bu bildirimi geldikten hemen sonra geri çekti; mesaj silinmiş olabilir. Sizdeki kopya burada duruyor.",
+  "recalledAtLabel": "Geri çekilme: {time}",
+  "recalledEmptyState": "Henüz geri çekilen bir şey yok",
+
+  "codeShredTitle": "Kodları otomatik imha et",
+  "codeShredSubtitle": "Yakalanan doğrulama kodlarını süresi dolunca yok et",
+  "codeShredExplainer": "Tek kullanımlık bir kod geldikten bir dakika sonra işe yaramaz hâle gelir ama tehlikeli olmayı sürdürür. Süre dolduğunda rakamlar arşivden, dışa aktarımlardan ve sonraki yedeklerden silinir; bildirimin kendisi kalır.",
+  "codeShredOff": "Kodları sakla",
+  "codeShredMinutes": "{minutes} dakika sonra",
+  "codeShredHour": "1 saat sonra",
+  "codeShredDay": "1 gün sonra",
+  "codeShredDone": "{count} kod imha edildi",
+  "codeShreddedLabel": "Kod imha edildi"
 }

@@ -398,8 +398,11 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     children: [
+                      // BUG FIX: these four chip labels were the last hardcoded
+                      // English strings in the archive - they stayed in English
+                      // even with the app switched to Turkish.
                       _FilterChip(
-                        label: 'All',
+                        label: l10n.filterAll,
                         isSelected: provider.filterMode == 'all',
                         onTap: () {
                           provider.setFilterMode('all');
@@ -408,24 +411,36 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                       ),
                       const SizedBox(width: 8),
                       _FilterChip(
-                        label: '⭐ Starred',
+                        label: '⭐ ${l10n.statStarred}',
                         isSelected: provider.filterMode == 'starred',
                         onTap: () => provider.setFilterMode('starred'),
                       ),
                       const SizedBox(width: 8),
                       _FilterChip(
-                        label: 'Unread',
+                        label: l10n.statUnread,
                         isSelected: provider.filterMode == 'unread',
                         onTap: () => provider.setFilterMode('unread'),
                       ),
                       const SizedBox(width: 8),
                       // Feature 3: Tagged filter
                       _FilterChip(
-                        label: '🏷️ Tagged',
+                        label: '🏷️ ${l10n.filterTagged}',
                         isSelected: provider.filterMode == 'tagged',
                         onTap: () => provider.setFilterMode('tagged'),
                       ),
                       const SizedBox(width: 8),
+                      // New feature A: Recall Radar. Only offered once something
+                      // has actually been withdrawn, so it doesn't sit there as a
+                      // permanently empty filter.
+                      if (provider.allNotifications.any((n) => n.isRecalled)) ...[
+                        _FilterChip(
+                          label: '↩️ ${l10n.filterRecalled}',
+                          isSelected: provider.filterMode == 'recalled',
+                          color: AppColors.warning,
+                          onTap: () => provider.setFilterMode('recalled'),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
                       // Tag-specific filters
                       ...provider.allTags.map((tag) {
                         return Padding(

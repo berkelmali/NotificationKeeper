@@ -50,7 +50,7 @@ class NotificationWidgetProvider : AppWidgetProvider() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val db = AppDatabase.getDatabase(context.applicationContext)
-                val recent = db.notificationDao().getAll().take(4)
+                val recent = db.notificationDao().getRecent(4)
 
                 val freshViews = RemoteViews(context.packageName, R.layout.widget_notification_keeper)
                 freshViews.setOnClickPendingIntent(R.id.widget_title, pendingIntent)

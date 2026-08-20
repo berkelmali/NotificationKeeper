@@ -193,6 +193,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                             colors: [AppColors.error, Color(0xFFE84393)],
                           ),
                         ),
+                        // ─── New feature A: Recall Radar ───
+                        _StatCard(
+                          title: l10n.statRecalled,
+                          value: stats?.recalledTodayCount ?? 0,
+                          icon: Icons.undo_rounded,
+                          gradient: const LinearGradient(
+                            colors: [AppColors.warning, Color(0xFFD97706)],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -202,13 +211,22 @@ class _DashboardScreenState extends State<DashboardScreen>
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Row(
                         children: [
-                          Icon(Icons.do_not_disturb_on_rounded, size: 14, color: AppColors.textTertiary),
+                          const Icon(Icons.do_not_disturb_on_rounded,
+                              size: 14, color: AppColors.textTertiary),
                           const SizedBox(width: 6),
-                          Text(
-                            '${stats!.quietHoursSkippedToday} notification${stats.quietHoursSkippedToday == 1 ? '' : 's'} skipped during Quiet Hours today',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.textTertiary,
-                                ),
+                          // BUG FIX: this sentence was hardcoded English and
+                          // stayed English with the app set to Turkish. It also
+                          // now says "captured quietly" rather than "skipped",
+                          // matching what Quiet Hours actually does since the
+                          // listener stopped throwing those notifications away.
+                          Expanded(
+                            child: Text(
+                              l10n.quietHoursCapturedToday(
+                                  stats!.quietHoursSkippedToday),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textTertiary,
+                                  ),
+                            ),
                           ),
                         ],
                       ),

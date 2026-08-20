@@ -2,4 +2,17 @@
 <resources>
     <string name="widget_app_name">Notification Keeper</string>
     <string name="widget_empty_state">Henüz bildirim yok</string>
+
+    <!-- NotificationListener tarafından gönderilen anlık uyarılar -->
+    <string name="alert_channel_name">Anlık Uyarılar</string>
+    <string name="alert_channel_description">Bir doğrulama kodu veya öncelikli anahtar kelime yakalandığında anında uyarır</string>
+    <string name="alert_code_title">Kod yakalandı</string>
+    <string name="alert_code_body">%1$s — görüntülemek için dokunun</string>
+    <string name="alert_priority_title">Öncelikli bildirim</string>
+    <string name="alert_fallback_body">Notification Keeper\'da görüntülemek için dokunun</string>
+
+    <!-- Yeni özellik A: Geri Çekme Radarı -->
+    <string name="recall_alert_title">Bir mesaj geri çekildi</string>
+    <string name="recall_alert_body">%1$s bir mesajı sildi — mesaj arşivinizde duruyor</string>
+    <string name="recall_alert_body_generic">Bir mesaj silindi — mesaj arşivinizde duruyor</string>
 </resources>

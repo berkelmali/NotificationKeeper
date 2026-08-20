@@ -661,4 +661,76 @@ class AppLocalizationsEn extends AppLocalizations {
   String heatmapTooltip(String time, int count) {
     return '$time: $count notifications';
   }
+
+  @override
+  String get filterTagged => 'Tagged';
+
+  @override
+  String appsMonitoredCount(int monitored, int total) {
+    return '$monitored / $total monitored';
+  }
+
+  @override
+  String quietHoursActiveRange(String start, String end) {
+    return 'Active: $start - $end';
+  }
+
+  @override
+  String quietHoursCapturedToday(int count) {
+    return '$count notifications captured quietly during Quiet Hours today';
+  }
+
+  @override
+  String get filterRecalled => 'Recalled';
+
+  @override
+  String get statRecalled => 'Recalled';
+
+  @override
+  String get recalledBadge => 'Recalled';
+
+  @override
+  String get recalledExplanation =>
+      'The sender withdrew this notification moments after it arrived, so the message may have been deleted. Your copy stays here.';
+
+  @override
+  String recalledAtLabel(String time) {
+    return 'Withdrawn at $time';
+  }
+
+  @override
+  String get recalledEmptyState => 'Nothing has been withdrawn yet';
+
+  @override
+  String get codeShredTitle => 'Auto-shred codes';
+
+  @override
+  String get codeShredSubtitle =>
+      'Destroy captured verification codes once they expire';
+
+  @override
+  String get codeShredExplainer =>
+      'A one-time code is useless a minute after it arrives but stays dangerous forever. When the window passes, the digits are wiped from the archive, from exports and from any later backup. The notification itself is kept.';
+
+  @override
+  String get codeShredOff => 'Keep codes';
+
+  @override
+  String codeShredMinutes(int minutes) {
+    return 'After $minutes minutes';
+  }
+
+  @override
+  String get codeShredHour => 'After 1 hour';
+
+  @override
+  String get codeShredDay => 'After 1 day';
+
+  @override
+  String codeShredDone(int count) {
+    return '$count codes shredded';
+  }
+
+  @override
+  String get codeShreddedLabel => 'Code shredded';
 }
