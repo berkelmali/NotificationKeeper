@@ -8,9 +8,9 @@
 *Built with Flutter, Kotlin, Room DB, and Material 3 Glassmorphism.*
 
 [![GitHub License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Flutter](https://img.shields.io/badge/Flutter-%3E%3D3.10.7-02569B?logo=flutter)](https://flutter.dev)
+[![Dart SDK](https://img.shields.io/badge/Dart%20SDK-%5E3.10.7-02569B?logo=dart)](https://dart.dev)
 [![Kotlin](https://img.shields.io/badge/Kotlin-Android-7F52FF?logo=kotlin)](https://kotlinlang.org)
-[![Room Database](https://img.shields.io/badge/Storage-Room%20DB%20v6-4285F4?logo=sqlite)](https://developer.android.com/training/data-storage/room)
+[![Room Database](https://img.shields.io/badge/Storage-Room%20DB%20v7-4285F4?logo=sqlite)](https://developer.android.com/training/data-storage/room)
 [![Security](https://img.shields.io/badge/Security-AES--256%20%2B%20Biometric-10B981)](#-security--privacy-first-architecture)
 [![Localization](https://img.shields.io/badge/Languages-EN%20%7C%20TR-purple)](#-multi-language-support)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/berkelmali/NotificationKeeper/pulls)
@@ -26,6 +26,8 @@
 **Notification Keeper** is an all-in-one notification history, security vault, and analytics application for Android. It seamlessly intercepts and organizes incoming system notifications in the background—ensuring you **never miss an important message, deleted chat, OTP verification code, or time-sensitive alert again**.
 
 Everything runs **100% locally on your device**. No external servers, no tracking, no ads, and no telemetry.
+
+Two things set it apart from a plain notification log: the **[Recall Radar](#-12-recall-radar--catch-deleted-messages)** flags messages whose sender tried to unsend them, and the **[Code Shredder](#-13-code-shredder--ephemeral-verification-codes)** destroys captured verification codes once they expire, so yesterday's archive stops being today's liability.
 
 ---
 
@@ -65,10 +67,10 @@ Everything runs **100% locally on your device**. No external servers, no trackin
 ### ⏳ 7. Granular App Controls & Quiet Hours
 - **Per-App Monitoring**: Selectively enable or disable notification recording for specific apps.
 - **Per-App Temporary Snooze**: Snooze logging for specific noisy apps for 1 hour, 8 hours, or 24 hours.
-- **Quiet Hours (Do Not Disturb)**: Schedule quiet windows where notifications are tracked quietly without triggering instant alert popups.
+- **Quiet Hours (Do Not Disturb)**: Schedule quiet windows where notifications keep being archived but no instant alert popup is raised. Nothing is dropped — the dashboard shows how many were captured quietly.
 
 ### 🧹 8. Automated Data Hygiene & Retention
-- **WorkManager Auto-Cleanup**: Set automated background retention policies (Keep Forever, 7, 14, 30, or 90 days).
+- **WorkManager Auto-Cleanup**: Set automated background retention policies (Keep Forever, 3, 7, 30, or 90 days).
 - **Orphan File Cleanup**: Automatically purges obsolete image attachments when older notification records expire.
 
 ### 💾 9. Backup, Restore & Export
@@ -80,8 +82,21 @@ Everything runs **100% locally on your device**. No external servers, no trackin
 - **Launcher Widget**: Native Android AppWidget (`NotificationWidgetProvider`) displaying the 4 most recent notifications right on your home screen with real-time updates.
 
 ### 🌐 11. Multi-Language Support & Glassmorphic UI
-- **Languages**: Full localization for English (`en`) and Turkish (`tr`).
+- **Languages**: Full localization for English (`en`) and Turkish (`tr`), covering the Flutter UI as well as the alerts the native listener posts.
 - **Modern Design**: Ultra-sleek dark and light themes, subtle gradients, Glassmorphic cards, Shimmer loaders, and edge-to-edge layout.
+
+### ↩️ 12. Recall Radar — Catch Deleted Messages
+- **Withdrawal Detection**: Android tells a listener *why* a notification disappeared. When the posting app pulls one back within seconds of sending it — exactly what a messaging app does the moment a sender deletes ("unsends") a message — the archived copy is flagged as **Recalled**.
+- **Your Copy Survives**: The message text was already saved; only the fact that someone tried to take it back is new information.
+- **Dedicated Filter & Alert**: A `↩️ Recalled` chip appears in the archive as soon as something is withdrawn, a dashboard counter tracks it, and an optional instant alert tells you the moment it happens.
+- **Honest by Design**: Apps also cancel their own notifications innocently, so this is a strong signal, not proof. The detector requires a near-instant withdrawal *and* a conversation-style notification, and the UI says "the message **may** have been deleted" rather than asserting it.
+
+### 🔥 13. Code Shredder — Ephemeral Verification Codes
+- **Self-Destructing OTPs**: A one-time code is useless a minute after it arrives but stays dangerous forever. Choose a shred window (5 minutes, 15 minutes, 1 hour, 1 day, or off) and expired codes destroy themselves.
+- **Real Destruction, Not Masking**: The digits are `UPDATE`d out of the database row — `extractedCode` is nulled and every 4-8 digit run in the title and body is replaced with bullets. They are gone from the archive, from CSV/JSON exports, and from any backup taken afterwards.
+- **History Survives**: The notification row is kept, so the archive still records *that* a code arrived from an app at a given time. Only the secret is destroyed.
+- **Runs While Closed**: A WorkManager job shreds on a schedule; the app also runs a pass on launch and on every archive refresh, so nothing expired is ever drawn on screen.
+- **Off by Default**: Destroying data is never turned on behind a user's back.
 
 ---
 
@@ -92,11 +107,14 @@ flowchart TD
     subgraph Android Native [Android Native Layer - Kotlin]
         NLS[NotificationListenerService] -->|Intercepts System StatusBar| NLS
         NLS -->|OTP & Keyword Parser| NLS
+        NLS -->|Recall Radar: flags withdrawn messages| ROOM
         NLS -->|Cache Images| FS[(Internal Storage)]
-        NLS -->|Persist Records| ROOM[(Room DB SQLite v6)]
+        NLS -->|Persist Records| ROOM[(Room DB SQLite v7)]
         
         WM[WorkManager RetentionWorker] -->|Daily Auto-Clean| ROOM
         WM -->|Delete Expired Media| FS
+
+        CS[WorkManager CodeShredWorker] -->|Destroy Expired OTP Digits| ROOM
         
         WIDGET[AppWidgetProvider] <-->|Display Recent 4| ROOM
         
@@ -130,7 +148,7 @@ flowchart TD
 |---|---|
 | **Framework** | [Flutter](https://flutter.dev) (Dart SDK `^3.10.7`) |
 | **Native Android** | Kotlin, Android SDK 34, `NotificationListenerService`, `AppWidgetProvider` |
-| **Local Database** | Native Android **Room ORM** (v6 schema migration pipeline) |
+| **Local Database** | Native Android **Room ORM** (v7 schema migration pipeline) |
 | **Background Tasks** | Android Jetpack **WorkManager** (`androidx.work:work-runtime-ktx`) |
 | **State Management** | [Provider](https://pub.dev/packages/provider) (`^6.1.5`) |
 | **Security & Auth** | [local_auth](https://pub.dev/packages/local_auth), [encrypt](https://pub.dev/packages/encrypt) (AES-256), [crypto](https://pub.dev/packages/crypto) (SHA-256) |
@@ -143,16 +161,22 @@ flowchart TD
 ## 🔒 Security & Privacy-First Architecture
 
 1. **Zero Cloud Dependencies**: The app operates completely offline. No tracking SDKs, no analytics endpoints, no third-party ads.
-2. **Encrypted Backups**: Backup files (`.nkbackup`) can be encrypted with AES-256-CBC using an encryption key derived via SHA-256 from your personal passphrase.
+2. **Encrypted Backups**: Backup files (`.nkbackup`) can be encrypted with AES-256-CBC under a key derived via SHA-256 from your passphrase, using a **randomly generated IV per backup** (stored in the file, as IVs are meant to be).
 3. **Biometric Guard**: Biometric authentication uses Android's native `BiometricPrompt` via `FlutterFragmentActivity`, ensuring cryptographic biometric verification with device PIN fallback.
 4. **Sandboxed Media**: Cached notification images are stored in `context.filesDir/notification_images/`—isolated from the public gallery and invisible to other apps.
+5. **Ephemeral Secrets**: With the [Code Shredder](#-13-code-shredder--ephemeral-verification-codes) enabled, captured verification codes are destroyed in place once they expire, so an old archive stops being a liability.
+
+### Known limits, stated plainly
+- The backup key is a plain **SHA-256 of the passphrase**, not a salted PBKDF2/Argon2 KDF. That is a real step up from an unencrypted file, but it is cheaper to brute-force than a proper KDF — choose a long passphrase, and treat a backup file as sensitive.
+- The **biometric vault unlocks per app process**: it is asked for on a cold start, not every time the app returns from the background.
+- **Recall Radar is a heuristic** (see feature 12) — a strong signal that a message was withdrawn, not a guarantee.
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- [Flutter SDK](https://docs.flutter.dev/get-started/install) (3.10.7 or higher)
+- [Flutter SDK](https://docs.flutter.dev/get-started/install) — any version whose bundled **Dart SDK satisfies `^3.10.7`** (see `pubspec.yaml`). Check yours with `flutter --version`.
 - [Android Studio](https://developer.android.com/studio) / Android SDK (API Level 21+ / Target SDK 34)
 - Java Development Kit (JDK 17 recommended)
 
@@ -203,12 +227,13 @@ NotificationKeeper/
 │       ├── kotlin/com/example/notification_keeper/
 │       │   ├── app/MainActivity.kt                # Platform MethodChannel handler
 │       │   ├── data/
-│       │   │   ├── database/AppDatabase.kt         # Room DB instance & migration v1-v6
+│       │   │   ├── database/AppDatabase.kt         # Room DB instance & migration v1-v7
 │       │   │   ├── dao/NotificationDao.kt          # SQLite Data Access Object
 │       │   │   └── entity/NotificationEntity.kt    # Notification & Preference entities
-│       │   ├── service/NotificationListener.kt     # Background notification interceptor
+│       │   ├── service/NotificationListener.kt     # Interceptor + Recall Radar
 │       │   ├── widget/NotificationWidgetProvider.kt# Android Home Screen Widget
-│       │   └── worker/RetentionWorker.kt          # WorkManager daily cleanup job
+│       │   ├── worker/RetentionWorker.kt           # WorkManager daily cleanup job
+│       │   └── worker/CodeShredWorker.kt           # WorkManager OTP shredder
 │       └── res/                                    # Widget layouts, icons & XML strings
 ├── lib/
 │   ├── data/
@@ -218,7 +243,8 @@ NotificationKeeper/
 │   │   └── models/                                 # Notification, AppInfo & Stats models
 │   ├── l10n/
 │   │   ├── app_en.arb                              # English localization template
-│   │   └── app_tr.arb                              # Turkish localization
+│   │   ├── app_tr.arb                              # Turkish localization
+│   │   └── generated/                              # flutter gen-l10n output (checked in)
 │   ├── presentation/
 │   │   ├── providers/                              # State management (Provider)
 │   │   ├── screens/                                # UI Screens (Dashboard, Archive, Settings, etc.)
@@ -242,10 +268,14 @@ flutter test
 ```
 
 Test suite includes:
-- **`notification_model_test.dart`**: Model deserialization, copyWith, tags, OTP flags.
-- **`backup_service_test.dart`**: AES-256 encryption & decryption round-trip, invalid passphrase rejection, corruption handling.
-- **`settings_provider_test.dart`**: SharedPreferences persistence for retention days, keyword radar, and biometric flags.
+- **`notification_model_test.dart`**: Model deserialization, copyWith, tags, OTP flags, plus the Recall Radar / Code Shredder columns (including rows written before the v7 migration).
+- **`notification_provider_test.dart`**: Archive filtering, the `recalled` filter mode, and the guarantee that the shred pass runs *before* the archive is read — and never blocks it if it fails.
+- **`backup_service_test.dart`**: AES-256 encryption & decryption round-trip, per-backup random IV, invalid passphrase rejection, corruption handling.
+- **`settings_provider_test.dart`**: SharedPreferences persistence for retention days, keyword radar, biometric flags, and the code-shred window.
+- **`app_info_model_test.dart`** / **`stats_model_test.dart`**: App preferences, snooze state, and dashboard aggregates.
 - **`recent_codes_widget_test.dart`**: OTP filtering, copy-to-clipboard actions, and auto-masking timer.
+
+> The Kotlin layer (listener, workers, Room migrations) has no automated tests. Migration `v6 → v7` in particular is worth exercising once on a device that already has data before shipping.
 
 ---
 

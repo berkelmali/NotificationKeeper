@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.Person
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Build
@@ -53,14 +54,25 @@ class NotificationListener : NotificationListenerService() {
         // (media playback controls, download progress, etc.) - these are noise, not "kept" content.
         if ((notification.flags and Notification.FLAG_ONGOING_EVENT) != 0) return
 
+        // BUG FIX: the README promises that noisy group-summary updates are
+        // filtered out, but nothing was actually filtering them - the flag was
+        // only recorded on the row. A summary ("3 new messages") duplicates the
+        // individual notifications that arrive alongside it, so it is dropped
+        // here. isGroupSummary stays on the entity for rows captured before
+        // this fix.
+        if ((notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0) return
+
         serviceScope.launch {
             try {
-                // Feature 5 (Clone from Notisave): Check quiet hours
-                if (isQuietHoursActive()) {
-                    Log.d("NotificationListener", "Quiet hours active, skipping notification from $packageName")
-                    incrementQuietHoursSkippedToday()
-                    return@launch
-                }
+                // Feature 5 (Clone from Notisave): Quiet Hours.
+                // BUG FIX: this used to `return` before storing anything, so an
+                // archiver silently lost every notification of the night - the
+                // opposite of what Quiet Hours means everywhere else in the app
+                // ("tracked quietly, without an alert popup", per the README).
+                // The capture now always happens; only the instant alert is
+                // suppressed. See the counter below for the "captured quietly"
+                // stat surfaced on the dashboard.
+                val quietNow = isQuietHoursActive()
 
                 // 1. Check if app is monitored
                 val isMonitored = database.appPreferenceDao().isMonitored(packageName) ?: false
@@ -75,29 +87,7 @@ class NotificationListener : NotificationListenerService() {
 
                 // 2. Extract Data
                 val extras = notification.extras
-
-                val title = extras.getString(Notification.EXTRA_TITLE)
-                var text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
-
-                // Merged from base.apk: handle MessagingStyle notifications (WhatsApp, Telegram, etc.)
-                // gracefully by grabbing the actual last message instead of a possibly stale summary.
-                if (extras.containsKey(Notification.EXTRA_MESSAGES)) {
-                    val messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
-                    if (!messages.isNullOrEmpty()) {
-                        val lastMessage = messages.last() as? Bundle
-                        val msgText = lastMessage?.getCharSequence("text")?.toString()
-                        if (!msgText.isNullOrBlank()) {
-                            text = msgText
-                        }
-                    }
-                }
-
-                if (text.isNullOrBlank()) {
-                    text = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
-                }
-                if (text.isNullOrBlank()) {
-                    text = extras.getString(Notification.EXTRA_SUMMARY_TEXT)
-                }
+                val (title, text) = extractTitleAndText(notification)
 
                 val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
                 val timestamp = sbn.postTime
@@ -146,7 +136,13 @@ class NotificationListener : NotificationListenerService() {
                     category = notification.category,
                     groupKey = sbn.groupKey,
                     isGroupSummary = (notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0,
-                    messagingUser = extras.getString(Notification.EXTRA_SELF_DISPLAY_NAME),
+                    // BUG FIX: EXTRA_SELF_DISPLAY_NAME is the *device owner's* name
+                    // (who the messaging app thinks "you" are), so every chat row was
+                    // labelled with the reader instead of the sender. The real sender
+                    // lives on the last MessagingStyle message; fall back to the old
+                    // value only when there is no message bundle to read.
+                    messagingUser = extractSender(notification)
+                        ?: extras.getString(Notification.EXTRA_SELF_DISPLAY_NAME),
                     isOtp = isOtp,
                     extractedCode = extractedCode,
                     isPriorityFlagged = isPriorityFlagged,
@@ -157,11 +153,20 @@ class NotificationListener : NotificationListenerService() {
                 database.notificationDao().insert(entity)
                 Log.d("NotificationListener", "Saved notification from $packageName (otp=$isOtp, priority=$isPriorityFlagged)")
 
+                // Counted here rather than at the top of the coroutine so the
+                // dashboard's "captured quietly" number reflects what was
+                // actually archived, not every notification the phone received
+                // from apps the user isn't even monitoring.
+                if (quietNow) {
+                    incrementQuietHoursCapturedToday()
+                }
+
                 // New feature: refresh the home screen widget with the latest capture
                 com.example.notification_keeper.widget.NotificationWidgetProvider.requestUpdate(applicationContext)
 
-                // New feature: instant alert for captured codes / priority matches
-                if (isOtp || isPriorityFlagged) {
+                // New feature: instant alert for captured codes / priority matches.
+                // Suppressed during Quiet Hours - the capture above still happened.
+                if ((isOtp || isPriorityFlagged) && !quietNow) {
                     postInstantAlert(isOtp, isPriorityFlagged, title, extractedCode, packageName)
                 }
             } catch (e: Exception) {
@@ -172,6 +177,124 @@ class NotificationListener : NotificationListenerService() {
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         // We do not delete from archive when notification is removed.
+        // (Pre-API-26 devices land here; they get no removal reason, so the
+        // Recall Radar below simply never fires for them.)
+    }
+
+    /**
+     * New feature A: "Recall Radar".
+     *
+     * The reason a notification disappears is the one signal Android gives us
+     * about *why*. When the user swipes it away we get REASON_CANCEL / _CLICK;
+     * when the posting app pulls it back itself we get REASON_APP_CANCEL - which
+     * is exactly what a messaging app does the instant a sender deletes ("unsends")
+     * a message that was already delivered. That message text is already safe in
+     * our archive; all that's missing is the fact that someone tried to take it back.
+     *
+     * Apps also cancel their own notifications for innocent reasons (you read the
+     * chat on your laptop, the app cleans up), so this is a heuristic, not proof.
+     * Two guards keep the false-positive rate sane, and the UI is worded as
+     * "may have been deleted" rather than stating it as fact:
+     *   1. the notification must have been withdrawn within [RECALL_WINDOW_MS] of
+     *      being posted - a recall is near-instant, reading a chat usually isn't;
+     *   2. it must look like a conversation (message category or a known sender),
+     *      because that's the only place "unsend" exists.
+     */
+    override fun onNotificationRemoved(
+        sbn: StatusBarNotification,
+        rankingMap: NotificationListenerService.RankingMap?,
+        reason: Int
+    ) {
+        super.onNotificationRemoved(sbn, rankingMap, reason)
+
+        if (sbn.packageName == applicationContext.packageName) return
+        if (reason != RECALL_REASON_APP_CANCEL && reason != RECALL_REASON_APP_CANCEL_ALL) return
+
+        val withdrawnAt = System.currentTimeMillis()
+        if (withdrawnAt - sbn.postTime > RECALL_WINDOW_MS) return
+
+        val notification = sbn.notification
+        if ((notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0) return
+
+        serviceScope.launch {
+            try {
+                val (title, text) = extractTitleAndText(notification)
+                if (title.isNullOrBlank() && text.isNullOrBlank()) return@launch
+
+                val stored = database.notificationDao()
+                    .findLatestMatch(sbn.packageName, title, text) ?: return@launch
+                if (stored.recalledAt != null) return@launch
+
+                // Only conversations can be "unsent" - skip transactional noise.
+                val looksLikeConversation =
+                    stored.category == Notification.CATEGORY_MESSAGE || stored.messagingUser != null
+                if (!looksLikeConversation) return@launch
+
+                database.notificationDao().markRecalled(stored.id, withdrawnAt)
+                Log.d("NotificationListener", "Recall detected for ${sbn.packageName} (id=${stored.id})")
+
+                com.example.notification_keeper.widget.NotificationWidgetProvider
+                    .requestUpdate(applicationContext)
+
+                if (!isQuietHoursActive()) {
+                    postRecallAlert(stored.messagingUser ?: title, sbn.packageName)
+                }
+            } catch (e: Exception) {
+                Log.e("NotificationListener", "Error processing removal", e)
+            }
+        }
+    }
+
+    /**
+     * Shared title/body extraction, used both when a notification arrives and
+     * when it is withdrawn - the two must agree exactly, or the Recall Radar
+     * would fail to find the row it stored moments earlier.
+     *
+     * Merged from base.apk: MessagingStyle notifications (WhatsApp, Telegram,
+     * Signal, ...) are handled by grabbing the actual last message rather than a
+     * possibly stale summary line.
+     */
+    private fun extractTitleAndText(notification: Notification): Pair<String?, String?> {
+        val extras = notification.extras
+        val title = extras.getString(Notification.EXTRA_TITLE)
+        var text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+
+        lastMessageBundle(notification)?.getCharSequence("text")?.toString()?.let { msgText ->
+            if (msgText.isNotBlank()) text = msgText
+        }
+
+        if (text.isNullOrBlank()) {
+            text = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
+        }
+        if (text.isNullOrBlank()) {
+            text = extras.getString(Notification.EXTRA_SUMMARY_TEXT)
+        }
+        return title to text
+    }
+
+    /** The last entry of a MessagingStyle notification's message array, if any. */
+    private fun lastMessageBundle(notification: Notification): Bundle? {
+        val extras = notification.extras
+        if (!extras.containsKey(Notification.EXTRA_MESSAGES)) return null
+        val messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
+        if (messages.isNullOrEmpty()) return null
+        return messages.last() as? Bundle
+    }
+
+    /**
+     * The name of whoever actually sent the last message. Newer apps put a
+     * [Person] under "sender_person"; older ones put a plain CharSequence under
+     * "sender". A null sender means the message came from the device owner.
+     */
+    private fun extractSender(notification: Notification): String? {
+        val bundle = lastMessageBundle(notification) ?: return null
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val person = bundle.getParcelable<Person>("sender_person")
+            val name = person?.name?.toString()
+            if (!name.isNullOrBlank()) return name
+        }
+        return bundle.getCharSequence("sender")?.toString()?.takeIf { it.isNotBlank() }
     }
 
     /**
@@ -215,11 +338,16 @@ class NotificationListener : NotificationListenerService() {
     }
 
     /**
-     * Merged from base.apk: feeds the "quietHoursSkippedToday" stat exposed via
+     * Merged from base.apk: feeds the "quiet hours" stat exposed via
      * MainActivity.getStats(). Stored per-calendar-day so it naturally resets at midnight
-     * without needing a separate scheduled job.
+     * without needing a separate scheduled job (MainActivity does the matching
+     * day check when it reads the value back).
+     *
+     * Since the Quiet Hours fix this counts notifications captured *quietly*
+     * (stored, but with the instant alert withheld) rather than notifications
+     * thrown away.
      */
-    private fun incrementQuietHoursSkippedToday() {
+    private fun incrementQuietHoursCapturedToday() {
         val prefs = applicationContext.getSharedPreferences("notification_keeper_prefs", MODE_PRIVATE)
         val today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
         val storedDay = prefs.getInt("quiet_hours_skipped_day", -1)
@@ -259,10 +387,10 @@ class NotificationListener : NotificationListenerService() {
             val manager = getSystemService(NotificationManager::class.java)
             val channel = NotificationChannel(
                 ALERT_CHANNEL_ID,
-                "Instant Alerts",
+                getString(R.string.alert_channel_name),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Immediate alerts when a verification code or priority keyword is captured"
+                description = getString(R.string.alert_channel_description)
             }
             manager?.createNotificationChannel(channel)
         }
@@ -284,10 +412,13 @@ class NotificationListener : NotificationListenerService() {
         val alertsEnabled = prefs.getBoolean("instant_alerts_enabled", true)
         if (!alertsEnabled) return
 
-        val alertTitle = if (isOtp) "Code captured" else "Priority notification"
+        val alertTitle = getString(
+            if (isOtp) R.string.alert_code_title else R.string.alert_priority_title
+        )
         val alertText = when {
-            isOtp && !extractedCode.isNullOrBlank() -> "$extractedCode — tap to view"
-            else -> title ?: "Tap to view in Notification Keeper"
+            isOtp && !extractedCode.isNullOrBlank() ->
+                getString(R.string.alert_code_body, extractedCode)
+            else -> title ?: getString(R.string.alert_fallback_body)
         }
 
         val launchIntent = Intent(applicationContext, MainActivity::class.java).apply {
@@ -320,7 +451,58 @@ class NotificationListener : NotificationListenerService() {
         }
     }
 
+    /**
+     * New feature A: tells the user that something was taken back. The content
+     * itself is deliberately not repeated here - the point is to send them to
+     * the archive, where the message survives.
+     */
+    private fun postRecallAlert(who: String?, sourcePackage: String) {
+        val prefs = applicationContext.getSharedPreferences("notification_keeper_prefs", MODE_PRIVATE)
+        if (!prefs.getBoolean("instant_alerts_enabled", true)) return
+
+        val launchIntent = Intent(applicationContext, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            applicationContext,
+            1,
+            launchIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(applicationContext, ALERT_CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(getString(R.string.recall_alert_title))
+            .setContentText(
+                if (who.isNullOrBlank()) getString(R.string.recall_alert_body_generic)
+                else getString(R.string.recall_alert_body, who)
+            )
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .build()
+
+        try {
+            val manager = getSystemService(NotificationManager::class.java)
+            manager?.notify("recall_$sourcePackage".hashCode(), notification)
+        } catch (e: SecurityException) {
+            Log.w("NotificationListener", "Could not post recall alert: ${e.message}")
+        }
+    }
+
     companion object {
         private const val ALERT_CHANNEL_ID = "instant_alerts"
+
+        // NotificationListenerService.REASON_APP_CANCEL / _ALL. Spelled out as
+        // literals so the Recall Radar compiles and links on the API 21+ range
+        // this app supports - the constants themselves only exist from API 26,
+        // which is also the first version that reports a removal reason at all.
+        private const val RECALL_REASON_APP_CANCEL = 8
+        private const val RECALL_REASON_APP_CANCEL_ALL = 9
+
+        // How soon after posting a withdrawal still counts as a "recall".
+        // Deleting a message you just sent happens in seconds; an app clearing a
+        // notification because you read the chat elsewhere usually takes longer.
+        private const val RECALL_WINDOW_MS = 60_000L
     }
 }

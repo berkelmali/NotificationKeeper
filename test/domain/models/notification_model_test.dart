@@ -22,6 +22,8 @@ void main() {
         'extractedCode': '123456',
         'isPriorityFlagged': true,
         'imagePath': '/data/user/0/.../img.jpg',
+        'recalledAt': 1000500,
+        'codeShredded': false,
       };
 
       final model = NotificationModel.fromMap(map);
@@ -32,6 +34,9 @@ void main() {
       expect(model.extractedCode, '123456');
       expect(model.isPriorityFlagged, true);
       expect(model.imagePath, '/data/user/0/.../img.jpg');
+      expect(model.recalledAt, 1000500);
+      expect(model.isRecalled, true);
+      expect(model.codeShredded, false);
     });
 
     test('accepts native boolean columns encoded as int 0/1 (SQLite/Room style)', () {
@@ -69,6 +74,39 @@ void main() {
       expect(model.extractedCode, isNull);
       expect(model.isPriorityFlagged, false);
       expect(model.imagePath, isNull);
+      // New features A & B: a row written before the v7 migration carries
+      // neither column, and must read back as "never recalled, never shredded"
+      // rather than blowing up on a missing key.
+      expect(model.recalledAt, isNull);
+      expect(model.isRecalled, false);
+      expect(model.codeShredded, false);
+    });
+
+    test('accepts the Recall Radar and Code Shredder flags in SQLite int form', () {
+      final map = <Object?, Object?>{
+        'id': 7,
+        'packageName': 'com.whatsapp',
+        'timestamp': 1700000000000,
+        'isGroupSummary': 0,
+        'recalledAt': 1700000005000,
+        'codeShredded': 1,
+      };
+
+      final model = NotificationModel.fromMap(map);
+
+      expect(model.isRecalled, true);
+      expect(model.recalledAt, 1700000005000);
+      expect(model.codeShredded, true);
+    });
+  });
+
+  group('NotificationModel.isRecalled (new feature A)', () {
+    test('is false while recalledAt is null', () {
+      expect(_baseModel().isRecalled, false);
+    });
+
+    test('is true once a withdrawal timestamp has been recorded', () {
+      expect(_baseModel(recalledAt: 1700000005000).isRecalled, true);
     });
   });
 
@@ -123,6 +161,8 @@ NotificationModel _baseModel({
   bool isOtp = false,
   bool isPriorityFlagged = false,
   String? tags,
+  int? recalledAt,
+  bool codeShredded = false,
 }) {
   return NotificationModel(
     id: 1,
@@ -134,5 +174,7 @@ NotificationModel _baseModel({
     isPriorityFlagged: isPriorityFlagged,
     imagePath: '/tmp/img.jpg',
     extractedCode: isOtp ? '000000' : null,
+    recalledAt: recalledAt,
+    codeShredded: codeShredded,
   );
 }

@@ -71,6 +71,10 @@ class BackupService {
                 'isOtp': n.isOtp,
                 'extractedCode': n.extractedCode,
                 'isPriorityFlagged': n.isPriorityFlagged,
+                // New features A & B: keep the "withdrawn by sender" marker and
+                // the "code already shredded" flag across a restore.
+                'recalledAt': n.recalledAt,
+                'codeShredded': n.codeShredded,
                 // imagePath intentionally omitted - the underlying image files
                 // aren't bundled into the backup to keep it a portable single file.
               })
@@ -86,7 +90,15 @@ class BackupService {
     String fileContent;
     if (passphrase != null && passphrase.isNotEmpty) {
       final key = _deriveKey(passphrase);
-      final iv = enc.IV.fromLength(16);
+      // BUG FIX: this used to be IV.fromLength(16), which is a block of zero
+      // bytes, not a random IV. Combined with a key derived deterministically
+      // from the passphrase, that made AES-CBC deterministic: the same archive
+      // encrypted twice produced byte-identical files, and two backups sharing
+      // a passphrase leaked how much of their content was identical from the
+      // front. The IV is public by design and is already written into the file,
+      // so generating a fresh random one costs nothing and old backups keep
+      // restoring - they simply carry their own (zero) IV with them.
+      final iv = enc.IV.fromSecureRandom(16);
       final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
       final encrypted = encrypter.encrypt(jsonString, iv: iv);
       fileContent = '$_encHeader${iv.base64}:${encrypted.base64}';

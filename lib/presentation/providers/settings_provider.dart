@@ -26,6 +26,10 @@ class SettingsProvider extends ChangeNotifier {
   // ─── New feature: instant local alerts for OTP/priority captures ───
   bool _instantAlertsEnabled = true;
 
+  // ─── New feature B: Code Shredder. Minutes a captured verification code is
+  // kept before its digits are destroyed. 0 = keep codes (shredder off). ───
+  int _otpShredMinutes = 0;
+
   // ─── New feature: multi-language support. null = follow system language ───
   Locale? _appLocale;
 
@@ -39,6 +43,7 @@ class SettingsProvider extends ChangeNotifier {
   List<String> get priorityKeywords => _priorityKeywords;
   bool get biometricLockEnabled => _biometricLockEnabled;
   bool get instantAlertsEnabled => _instantAlertsEnabled;
+  int get otpShredMinutes => _otpShredMinutes;
   Locale? get appLocale => _appLocale;
 
   Future<void> setAppLocale(Locale? locale) async {
@@ -98,6 +103,9 @@ class SettingsProvider extends ChangeNotifier {
 
     // New feature: instant local alerts
     _instantAlertsEnabled = prefs.getBool('instantAlertsEnabled') ?? true;
+
+    // New feature B: Code Shredder window
+    _otpShredMinutes = prefs.getInt('otpShredMinutes') ?? 0;
 
     // New feature: multi-language support
     final localeCode = prefs.getString('appLocaleCode');
@@ -211,6 +219,17 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('instantAlertsEnabled', enabled);
+  }
+
+  // ─── New feature B: Code Shredder. Local persistence only - the caller
+  // (settings_screen.dart) is also responsible for calling
+  // NotificationRepository.setOtpShredMinutes so the native shred worker picks
+  // it up, matching the existing retention/keyword/alert pattern. ───
+  Future<void> setOtpShredMinutes(int minutes) async {
+    _otpShredMinutes = minutes;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('otpShredMinutes', minutes);
   }
 
   ThemeMode _themeModeFromString(String str) {

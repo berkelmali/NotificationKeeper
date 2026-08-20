@@ -263,5 +263,51 @@
       "time": { "type": "String" },
       "count": { "type": "int" }
     }
-  }
+  },
+
+  "filterTagged": "Tagged",
+  "appsMonitoredCount": "{monitored} / {total} monitored",
+  "@appsMonitoredCount": {
+    "placeholders": {
+      "monitored": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "quietHoursActiveRange": "Active: {start} - {end}",
+  "@quietHoursActiveRange": {
+    "placeholders": {
+      "start": { "type": "String" },
+      "end": { "type": "String" }
+    }
+  },
+  "quietHoursCapturedToday": "{count} notifications captured quietly during Quiet Hours today",
+  "@quietHoursCapturedToday": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "filterRecalled": "Recalled",
+  "statRecalled": "Recalled",
+  "recalledBadge": "Recalled",
+  "recalledExplanation": "The sender withdrew this notification moments after it arrived, so the message may have been deleted. Your copy stays here.",
+  "recalledAtLabel": "Withdrawn at {time}",
+  "@recalledAtLabel": {
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "recalledEmptyState": "Nothing has been withdrawn yet",
+
+  "codeShredTitle": "Auto-shred codes",
+  "codeShredSubtitle": "Destroy captured verification codes once they expire",
+  "codeShredExplainer": "A one-time code is useless a minute after it arrives but stays dangerous forever. When the window passes, the digits are wiped from the archive, from exports and from any later backup. The notification itself is kept.",
+  "codeShredOff": "Keep codes",
+  "codeShredMinutes": "After {minutes} minutes",
+  "@codeShredMinutes": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "codeShredHour": "After 1 hour",
+  "codeShredDay": "After 1 day",
+  "codeShredDone": "{count} codes shredded",
+  "@codeShredDone": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "codeShreddedLabel": "Code shredded"
 }

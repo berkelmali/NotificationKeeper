@@ -25,5 +25,14 @@ data class NotificationEntity(
     // New feature: path to a saved copy of an image attached to the notification
     // (BigPictureStyle images or large icons), if any. Null if there was no image
     // or it couldn't be saved.
-    val imagePath: String? = null
+    val imagePath: String? = null,
+    // --- New feature A: Recall Radar ---
+    // Epoch millis of the moment the source app withdrew this notification
+    // shortly after posting it (the fingerprint of a deleted/unsent message).
+    // Null means it was never withdrawn, or it was dismissed normally by the user.
+    val recalledAt: Long? = null,
+    // --- New feature B: Code Shredder ---
+    // true once the auto-shred pass has wiped the verification code out of this
+    // row (extractedCode nulled, digits in title/content replaced with bullets).
+    val codeShredded: Boolean = false
 )

@@ -660,4 +660,76 @@ class AppLocalizationsTr extends AppLocalizations {
   String heatmapTooltip(String time, int count) {
     return '$time: $count bildirim';
   }
+
+  @override
+  String get filterTagged => 'Etiketli';
+
+  @override
+  String appsMonitoredCount(int monitored, int total) {
+    return '$monitored / $total izleniyor';
+  }
+
+  @override
+  String quietHoursActiveRange(String start, String end) {
+    return 'Etkin: $start - $end';
+  }
+
+  @override
+  String quietHoursCapturedToday(int count) {
+    return 'Bugün sessiz saatlerde $count bildirim sessizce kaydedildi';
+  }
+
+  @override
+  String get filterRecalled => 'Geri çekilen';
+
+  @override
+  String get statRecalled => 'Geri çekilen';
+
+  @override
+  String get recalledBadge => 'Geri çekildi';
+
+  @override
+  String get recalledExplanation =>
+      'Gönderen bu bildirimi geldikten hemen sonra geri çekti; mesaj silinmiş olabilir. Sizdeki kopya burada duruyor.';
+
+  @override
+  String recalledAtLabel(String time) {
+    return 'Geri çekilme: $time';
+  }
+
+  @override
+  String get recalledEmptyState => 'Henüz geri çekilen bir şey yok';
+
+  @override
+  String get codeShredTitle => 'Kodları otomatik imha et';
+
+  @override
+  String get codeShredSubtitle =>
+      'Yakalanan doğrulama kodlarını süresi dolunca yok et';
+
+  @override
+  String get codeShredExplainer =>
+      'Tek kullanımlık bir kod geldikten bir dakika sonra işe yaramaz hâle gelir ama tehlikeli olmayı sürdürür. Süre dolduğunda rakamlar arşivden, dışa aktarımlardan ve sonraki yedeklerden silinir; bildirimin kendisi kalır.';
+
+  @override
+  String get codeShredOff => 'Kodları sakla';
+
+  @override
+  String codeShredMinutes(int minutes) {
+    return '$minutes dakika sonra';
+  }
+
+  @override
+  String get codeShredHour => '1 saat sonra';
+
+  @override
+  String get codeShredDay => '1 gün sonra';
+
+  @override
+  String codeShredDone(int count) {
+    return '$count kod imha edildi';
+  }
+
+  @override
+  String get codeShreddedLabel => 'Kod imha edildi';
 }

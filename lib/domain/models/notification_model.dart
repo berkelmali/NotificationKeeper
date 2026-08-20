@@ -19,6 +19,15 @@ class NotificationModel {
   final bool isPriorityFlagged;
   final String? imagePath; // New feature: path to a saved attached image, if any
 
+  /// New feature A (Recall Radar): epoch millis of the moment the source app
+  /// withdrew this notification right after posting it — the fingerprint of a
+  /// message the sender deleted. Null means it was never withdrawn.
+  final int? recalledAt;
+
+  /// New feature B (Code Shredder): true once the verification code in this row
+  /// has been destroyed because it outlived the user's shred window.
+  final bool codeShredded;
+
   NotificationModel({
     required this.id,
     required this.packageName,
@@ -37,7 +46,13 @@ class NotificationModel {
     this.extractedCode,
     this.isPriorityFlagged = false,
     this.imagePath,
+    this.recalledAt,
+    this.codeShredded = false,
   });
+
+  /// New feature A: whether this notification was withdrawn by the app that
+  /// posted it — i.e. the sender most likely deleted the message.
+  bool get isRecalled => recalledAt != null;
 
   /// Get tags as a list
   List<String> get tagList {
@@ -64,6 +79,8 @@ class NotificationModel {
       extractedCode: map['extractedCode'] as String?,
       isPriorityFlagged: map['isPriorityFlagged'] == 1 || map['isPriorityFlagged'] == true,
       imagePath: map['imagePath'] as String?,
+      recalledAt: (map['recalledAt'] as num?)?.toInt(),
+      codeShredded: map['codeShredded'] == 1 || map['codeShredded'] == true,
     );
   }
 
@@ -85,6 +102,8 @@ class NotificationModel {
     String? extractedCode,
     bool? isPriorityFlagged,
     String? imagePath,
+    int? recalledAt,
+    bool? codeShredded,
   }) {
     return NotificationModel(
       id: id ?? this.id,
@@ -104,6 +123,8 @@ class NotificationModel {
       extractedCode: extractedCode ?? this.extractedCode,
       isPriorityFlagged: isPriorityFlagged ?? this.isPriorityFlagged,
       imagePath: imagePath ?? this.imagePath,
+      recalledAt: recalledAt ?? this.recalledAt,
+      codeShredded: codeShredded ?? this.codeShredded,
     );
   }
 }

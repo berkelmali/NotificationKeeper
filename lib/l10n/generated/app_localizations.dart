@@ -1279,6 +1279,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{time}: {count} notifications'**
   String heatmapTooltip(String time, int count);
+
+  /// No description provided for @filterTagged.
+  ///
+  /// In en, this message translates to:
+  /// **'Tagged'**
+  String get filterTagged;
+
+  /// No description provided for @appsMonitoredCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{monitored} / {total} monitored'**
+  String appsMonitoredCount(int monitored, int total);
+
+  /// No description provided for @quietHoursActiveRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Active: {start} - {end}'**
+  String quietHoursActiveRange(String start, String end);
+
+  /// No description provided for @quietHoursCapturedToday.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} notifications captured quietly during Quiet Hours today'**
+  String quietHoursCapturedToday(int count);
+
+  /// No description provided for @filterRecalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Recalled'**
+  String get filterRecalled;
+
+  /// No description provided for @statRecalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Recalled'**
+  String get statRecalled;
+
+  /// No description provided for @recalledBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Recalled'**
+  String get recalledBadge;
+
+  /// No description provided for @recalledExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'The sender withdrew this notification moments after it arrived, so the message may have been deleted. Your copy stays here.'**
+  String get recalledExplanation;
+
+  /// No description provided for @recalledAtLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdrawn at {time}'**
+  String recalledAtLabel(String time);
+
+  /// No description provided for @recalledEmptyState.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing has been withdrawn yet'**
+  String get recalledEmptyState;
+
+  /// No description provided for @codeShredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-shred codes'**
+  String get codeShredTitle;
+
+  /// No description provided for @codeShredSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Destroy captured verification codes once they expire'**
+  String get codeShredSubtitle;
+
+  /// No description provided for @codeShredExplainer.
+  ///
+  /// In en, this message translates to:
+  /// **'A one-time code is useless a minute after it arrives but stays dangerous forever. When the window passes, the digits are wiped from the archive, from exports and from any later backup. The notification itself is kept.'**
+  String get codeShredExplainer;
+
+  /// No description provided for @codeShredOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep codes'**
+  String get codeShredOff;
+
+  /// No description provided for @codeShredMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'After {minutes} minutes'**
+  String codeShredMinutes(int minutes);
+
+  /// No description provided for @codeShredHour.
+  ///
+  /// In en, this message translates to:
+  /// **'After 1 hour'**
+  String get codeShredHour;
+
+  /// No description provided for @codeShredDay.
+  ///
+  /// In en, this message translates to:
+  /// **'After 1 day'**
+  String get codeShredDay;
+
+  /// No description provided for @codeShredDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} codes shredded'**
+  String codeShredDone(int count);
+
+  /// No description provided for @codeShreddedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Code shredded'**
+  String get codeShreddedLabel;
 }
 
 class _AppLocalizationsDelegate

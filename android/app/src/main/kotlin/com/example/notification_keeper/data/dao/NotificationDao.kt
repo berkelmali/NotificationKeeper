@@ -17,8 +17,16 @@ interface NotificationDao {
     @Query("SELECT * FROM notifications ORDER BY timestamp DESC")
     suspend fun getAll(): List<NotificationEntity>
 
+    // Home screen widget only ever shows a handful of rows - fetching just those
+    // beats loading the whole archive into memory on every widget refresh.
+    @Query("SELECT * FROM notifications ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun getRecent(limit: Int): List<NotificationEntity>
+
     @Query("SELECT * FROM notifications WHERE packageName = :packageName ORDER BY timestamp DESC")
     suspend fun getByApp(packageName: String): List<NotificationEntity>
+
+    @Query("SELECT * FROM notifications WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Long): NotificationEntity?
 
     // Check if a similar notification exists within the given time range
     @Query("SELECT * FROM notifications WHERE packageName = :packageName AND title = :title AND content = :content AND timestamp > :timestampLimit LIMIT 1")
@@ -84,6 +92,38 @@ interface NotificationDao {
         "ORDER BY timestamp DESC"
     )
     suspend fun searchWithDateRange(query: String, start: Long, end: Long): List<NotificationEntity>
+
+    // --- New feature A: Recall Radar ---
+
+    // Finds the row we stored for a notification that has just been withdrawn.
+    // `IS` (not `=`) is deliberate: it is SQLite's null-safe comparison, and both
+    // title and content are legitimately null for some notifications.
+    @Query(
+        "SELECT * FROM notifications WHERE packageName = :packageName " +
+        "AND title IS :title AND content IS :content ORDER BY timestamp DESC LIMIT 1"
+    )
+    suspend fun findLatestMatch(packageName: String, title: String?, content: String?): NotificationEntity?
+
+    @Query("UPDATE notifications SET recalledAt = :recalledAt WHERE id = :id")
+    suspend fun markRecalled(id: Long, recalledAt: Long)
+
+    @Query("SELECT COUNT(*) FROM notifications WHERE recalledAt >= :since")
+    suspend fun getRecalledCountSince(since: Long): Int
+
+    // --- New feature B: Code Shredder ---
+
+    // Captured codes that are older than the user's shred window and haven't
+    // been wiped yet.
+    @Query("SELECT * FROM notifications WHERE isOtp = 1 AND codeShredded = 0 AND timestamp < :cutoff")
+    suspend fun getShreddableCodes(cutoff: Long): List<NotificationEntity>
+
+    // Wipes a code in place. The row itself is kept (so the archive still shows
+    // "a code arrived from X at Y"), only the digits are destroyed.
+    @Query(
+        "UPDATE notifications SET extractedCode = NULL, title = :title, content = :content, " +
+        "codeShredded = 1 WHERE id = :id"
+    )
+    suspend fun shredCode(id: Long, title: String?, content: String?)
 }
 
 data class AppNotificationCount(

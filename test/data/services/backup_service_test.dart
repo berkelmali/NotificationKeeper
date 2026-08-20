@@ -108,6 +108,47 @@ void main() {
       expect(content, isNot(contains('com.whatsapp')));
     });
 
+    test('encrypting the same archive twice produces different ciphertext '
+        '(regression: the IV used to be a fixed block of zero bytes, which made '
+        'AES-CBC deterministic and leaked how much two backups had in common)',
+        () async {
+      final service = BackupService(NotificationRepository());
+
+      final first = await File(await service.createBackup(
+        passphrase: 'same-passphrase-both-times',
+        directoryOverride: tempDir,
+      )).readAsString();
+      final second = await File(await service.createBackup(
+        passphrase: 'same-passphrase-both-times',
+        directoryOverride: tempDir,
+      )).readAsString();
+
+      // Both are encrypted...
+      expect(first.startsWith('NKENC1:'), true);
+      expect(second.startsWith('NKENC1:'), true);
+      // ...with different IVs, so the payloads cannot match.
+      final firstIv = first.substring('NKENC1:'.length).split(':')[0];
+      final secondIv = second.substring('NKENC1:'.length).split(':')[0];
+      expect(firstIv, isNot(equals(secondIv)));
+      expect(first, isNot(equals(second)));
+    });
+
+    test('a randomly-IV\'d backup still round-trips with its passphrase', () async {
+      final service = BackupService(NotificationRepository());
+      final path = await service.createBackup(
+        passphrase: 'random-iv-round-trip',
+        directoryOverride: tempDir,
+      );
+
+      final result = await service.restoreBackup(
+        filePath: path,
+        passphrase: 'random-iv-round-trip',
+      );
+
+      expect(result.isSuccess, true);
+      expect(result.restoredCount, 1);
+    });
+
     test('gathers data from all four repository calls', () async {
       final service = BackupService(NotificationRepository());
       await service.createBackup(directoryOverride: tempDir);

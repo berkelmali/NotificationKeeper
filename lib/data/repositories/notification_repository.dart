@@ -74,6 +74,7 @@ class NotificationRepository {
         otpCountToday: (result['otpCountToday'] as num?)?.toInt() ?? 0,
         priorityCountToday: (result['priorityCountToday'] as num?)?.toInt() ?? 0,
         quietHoursSkippedToday: (result['quietHoursSkippedToday'] as num?)?.toInt() ?? 0,
+        recalledTodayCount: (result['recalledTodayCount'] as num?)?.toInt() ?? 0,
       );
     } on PlatformException catch (e) {
       print("Failed to get stats: '${e.message}'.");
@@ -329,6 +330,45 @@ class NotificationRepository {
     } on PlatformException catch (e) {
       print("Failed to get instant alerts: '${e.message}'.");
       return true;
+    }
+  }
+
+  // ─── New feature B: Code Shredder (ephemeral verification codes) ───
+
+  /// [minutes] of 0 keeps captured codes forever (shredder disabled).
+  /// Returns how many codes the immediate pass wiped, so the UI can tell the
+  /// user that shortening the window took effect right away.
+  Future<int> setOtpShredMinutes(int minutes) async {
+    try {
+      final int? shredded = await platform.invokeMethod('setOtpShredMinutes', {
+        'minutes': minutes,
+      });
+      return shredded ?? 0;
+    } on PlatformException catch (e) {
+      print("Failed to set shred window: '${e.message}'.");
+      return 0;
+    }
+  }
+
+  Future<int> getOtpShredMinutes() async {
+    try {
+      final int? result = await platform.invokeMethod('getOtpShredMinutes');
+      return result ?? 0;
+    } on PlatformException catch (e) {
+      print("Failed to get shred window: '${e.message}'.");
+      return 0;
+    }
+  }
+
+  /// Runs the shred pass on demand (e.g. when the archive is refreshed), so a
+  /// code that expired since the last worker tick is gone before it is drawn.
+  Future<int> shredExpiredCodesNow() async {
+    try {
+      final int? shredded = await platform.invokeMethod('shredExpiredCodesNow');
+      return shredded ?? 0;
+    } on PlatformException catch (e) {
+      print("Failed to shred codes: '${e.message}'.");
+      return 0;
     }
   }
 

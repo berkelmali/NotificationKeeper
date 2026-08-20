@@ -11,7 +11,7 @@ import com.example.notification_keeper.data.dao.NotificationDao
 import com.example.notification_keeper.data.entity.AppPreferenceEntity
 import com.example.notification_keeper.data.entity.NotificationEntity
 
-@Database(entities = [NotificationEntity::class, AppPreferenceEntity::class], version = 6, exportSchema = false)
+@Database(entities = [NotificationEntity::class, AppPreferenceEntity::class], version = 7, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun notificationDao(): NotificationDao
     abstract fun appPreferenceDao(): AppPreferenceDao
@@ -60,6 +60,29 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // New features: Recall Radar (recalledAt) + Code Shredder (codeShredded)
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE notifications ADD COLUMN recalledAt INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE notifications ADD COLUMN codeShredded INTEGER NOT NULL DEFAULT 0")
+
+                // BUG FIX: MIGRATION_3_4 created two partial indexes that are not
+                // declared on NotificationEntity. Room validates the *final* schema
+                // once, after the whole migration chain has run, and an index it did
+                // not expect makes that check fail with
+                //   "Migration didn't properly handle: notifications(...)"
+                // - i.e. every user upgrading from a v3-or-later database crashed on
+                // launch, while fresh installs (built straight from the entity) were
+                // fine. Partial indexes can't be expressed with @Index, so the fix is
+                // to drop them; because Room validates only after the last migration,
+                // dropping them here repairs the chain for v3, v4, v5 and v6 users
+                // alike. The queries they backed are simple ORDER BY/WHERE scans over
+                // a table that stays small thanks to the retention worker.
+                db.execSQL("DROP INDEX IF EXISTS idx_notifications_otp")
+                db.execSQL("DROP INDEX IF EXISTS idx_notifications_priority")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -67,7 +90,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "notification_keeper_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                 .fallbackToDestructiveMigration() // For development simplicity
                 .build()
                 INSTANCE = instance

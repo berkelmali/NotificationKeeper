@@ -451,3 +451,147 @@ geçirilmedi — test edip başka bir şey görürseniz mesajı buraya yapışt�
 
 
 
+
+---
+
+# Faz 10 — README Bütünlük Denetimi + 2 Yeni Özellik
+
+Bu faz iki iş yapıyor: (1) README'de yazan **her** iddiayı koda karşı tek tek
+doğruladım ve tutmayanları düzelttim, (2) projenin çizgisine oturan iki yeni
+özellik ekledim.
+
+> **Not:** Bu ortamda Flutter/Android SDK kurulu olmadığı için `flutter test`
+> ve `flutter analyze` yine çalıştırılamadı. Doğrulama statik okuma ile
+> yapıldı; testler yazıldı ama koşturulmadı.
+
+## A. README'de yazıp da yapmayan davranışlar (düzeltildi)
+
+| # | İddia | Gerçek durum | Düzeltme |
+|---|---|---|---|
+| 1 | "Sessiz saatlerde bildirimler sessizce **takip edilir**" | `NotificationListener` sessiz saatlerde bildirimi **hiç kaydetmeden** atıyordu — bir arşivleyici için gecenin tamamını kaybetmek demek | Artık her zaman kaydediliyor, yalnızca anlık uyarı bastırılıyor. Dashboard'daki sayaç "sessizce kaydedildi" anlamına geldi |
+| 2 | Sessiz Saatler anahtarı | Ana açma/kapama anahtarı **native tarafa hiç yazılmıyordu** (yalnızca saat seçiciler yazıyordu). Açmak ya da kapatmak hiçbir şey yapmıyordu | `settings_screen.dart` anahtarı da `repo.setQuietHours(...)` çağırıyor |
+| 3 | "Grup özeti bildirimleri filtrelenir" | Hiçbir yerde filtrelenmiyordu; bayrak yalnızca satıra yazılıyordu | `FLAG_GROUP_SUMMARY` olan bildirimler artık atlanıyor |
+| 4 | "Gerçek göndereni çıkarır" | `messagingUser` alanına `EXTRA_SELF_DISPLAY_NAME` yazılıyordu — bu **cihaz sahibinin** adı, gönderenin değil | Son MessagingStyle mesajından `sender_person` / `sender` okunuyor, eski değer yalnızca yedek olarak kalıyor |
+| 5 | Sessiz saat istatistiği | Sayaç güne bağlı yazılıyor ama **güne bakılmadan okunuyordu**; dünkü sayı bugün görünüyordu | `getStats` artık kayıtlı günü karşılaştırıyor |
+| 6 | "AES-256-CBC ile şifreli yedek" | Doğru, ama IV `IV.fromLength(16)` = **sıfır bloğu**. Anahtar da parolanın deterministik SHA-256'sı olduğu için aynı arşiv iki kez şifrelendiğinde bayt bayt aynı dosya çıkıyordu | Yedek başına `IV.fromSecureRandom(16)`. IV zaten dosyada saklandığı için **eski yedekler açılmaya devam ediyor** |
+| 7 | "Tam TR/EN yerelleştirme" | Arşiv filtre çipleri, "monitored" sayacı, sessiz saat satırı ve native uyarı metinleri sabit İngilizceydi | Hepsi ARB'ye taşındı; native uyarılar `res/values(-tr)/strings.xml` dosyalarına taşındı |
+| 8 | "Eskiyen kayıtların görselleri temizlenir" | Toplu silmelerde evet, **tek bildirim silinince hayır** — dosya diskte kalıyordu | `deleteNotification` artık `imagePath` dosyasını da siliyor |
+| 9 | Otomatik temizlik "7, 14, 30, 90 gün" | Arayüzde 3, 7, 30, 90 var | README düzeltildi (kod değil) |
+| 10 | "Flutter >= 3.10.7" | `pubspec.yaml` **Dart SDK** `^3.10.7` istiyor; Flutter 3.10.7 ise Dart 3.0.6 ile gelir, yani README'yi izleyen kişide `flutter pub get` patlar | Rozet ve önkoşul Dart SDK'ya göre düzeltildi |
+
+## B. Ayrıca bulunan, README dışı hata
+
+**Room şema doğrulaması v3→v4 yükseltmesinde çöküyordu.** `MIGRATION_3_4`,
+`NotificationEntity` üzerinde tanımlı olmayan iki *kısmi* index yaratıyor
+(`idx_notifications_otp`, `idx_notifications_priority`). Room, migration
+zincirinin **sonunda** beklenen şemayı bir kez doğrular ve beklemediği bir
+index görürse `IllegalStateException: Migration didn't properly handle` atar.
+Temiz kurulumlar (şema doğrudan entity'den üretildiği için) etkilenmiyordu;
+**güncelleyen kullanıcılar** etkileniyordu. `fallbackToDestructiveMigration()`
+burada devreye girmez, çünkü sorun "eksik migration yolu" değil, doğrulama
+hatası.
+
+Kısmi index `@Index` ile ifade edilemediği için düzeltme, index'leri
+`MIGRATION_6_7` içinde `DROP INDEX IF EXISTS` ile kaldırmak. Doğrulama en sonda
+bir kez çalıştığından bu, v3/v4/v5/v6'dan gelen **tüm** kullanıcıların zincirini
+onarıyor.
+
+## C. Yeni özellik 1 — Geri Çekme Radarı (Recall Radar)
+
+README'nin girişinde "silinen sohbeti kaçırma" yazıyordu ama silme tespiti
+hiç yoktu. Artık var.
+
+Android, bir bildirimin **neden** kaybolduğunu söylüyor. Kullanıcı kaydırınca
+`REASON_CANCEL` / `REASON_CLICK`, uygulamanın kendisi geri çekince
+`REASON_APP_CANCEL` geliyor — bir mesajlaşma uygulamasının, gönderen mesajı
+"herkesten sil" dediği anda yaptığı tam olarak bu. Mesajın metni bizde zaten
+kayıtlı; eksik olan tek bilgi, birinin onu geri almaya çalıştığıydı.
+
+- Şema v7: `notifications.recalledAt` (epoch millis, null = geri çekilmedi)
+- `NotificationListener.onNotificationRemoved(sbn, rankingMap, reason)` eklendi
+- Arşivde geri çekilenler için filtre çipi (yalnızca gerçekten bir şey geri
+  çekildiyse görünür), kartta rozet, detay sayfasında açıklama, dashboard'da sayaç
+- Anlık uyarı (Anlık Uyarılar ayarına ve Sessiz Saatler'e saygı duyar)
+
+**Sezgisel olduğu açıkça yazıldı:** uygulamalar kendi bildirimlerini masum
+sebeplerle de iptal eder (sohbeti bilgisayardan okumak gibi). İki güvence var —
+geri çekme, gönderimden en fazla **60 saniye** sonra olmalı ve bildirim sohbet
+tipinde olmalı (`CATEGORY_MESSAGE` ya da bilinen bir gönderen) — ve arayüz
+"silinmiş **olabilir**" diyor, kesin konuşmuyor.
+
+## D. Yeni özellik 2 — Kod İmha Edici (Code Shredder)
+
+Tek kullanımlık kod, bu uygulamanın sakladığı **en hassas** veri ve geldikten
+bir dakika sonra işe yaramaz hâle geliyor — ama tehlikeli olmayı sürdürüyor.
+Kasayı aşan (ya da şifresiz bir dışa aktarımı ele geçiren) biri, telefonun
+gördüğü **tüm** kodları devralıyor.
+
+Artık bir imha penceresi seçilebiliyor: kapalı / 5 dk / 15 dk / 1 saat / 1 gün.
+Süresi dolan kodun rakamları **yerinde yok ediliyor**: `extractedCode`
+null'lanıyor ve başlık ile içerikteki 4-8 haneli her dizi madde imiyle
+değiştiriliyor.
+
+- Şema v7: `notifications.codeShredded`
+- `worker/CodeShredWorker.kt` — `CodeShredder` nesnesi (mantık) + 15 dakikalık
+  periyodik worker (WorkManager'ın izin verdiği en kısa aralık)
+- Uygulama açılışında ve **her arşiv yenilemesinde** de bir geçiş çalışıyor,
+  yani süresi dolmuş bir kod ekrana tek kare bile çizilmiyor
+- Görüntü filtresi değil, gerçek `UPDATE`: kod veritabanından, CSV/JSON
+  dışa aktarımlarından ve sonradan alınan yedeklerden gidiyor
+- Satırın kendisi duruyor — "şu uygulamadan şu saatte bir kod geldi" bilgisi
+  korunuyor, yalnızca sır yok ediliyor
+- **Varsayılan kapalı.** Kimsenin istemediği bir veri imhası sessizce açılmaz
+
+## E. Küçük iyileştirmeler
+
+- Ana ekran widget'ı artık `getAll().take(4)` yerine `getRecent(4)` kullanıyor
+  (her yenilemede tüm arşivi belleğe almıyor)
+- `deleteNotification` için `getById(id)` DAO sorgusu eklendi
+- Yedek dosyası `recalledAt` ve `codeShredded` alanlarını da taşıyor
+
+## F. Eklenen / değişen dosyalar (Faz 10)
+
+| Dosya | Değişiklik |
+|---|---|
+| `data/entity/NotificationEntity.kt` | `recalledAt`, `codeShredded` alanları |
+| `data/database/AppDatabase.kt` | v7 + `MIGRATION_6_7` (yeni sütunlar + bozuk index'lerin kaldırılması) |
+| `data/dao/NotificationDao.kt` | `getRecent`, `getById`, `findLatestMatch`, `markRecalled`, `getRecalledCountSince`, `getShreddableCodes`, `shredCode` |
+| `service/NotificationListener.kt` | Geri Çekme Radarı, grup özeti filtresi, gerçek gönderen, sessiz saat davranışı, string kaynakları |
+| `worker/CodeShredWorker.kt` | **Yeni.** Kod imha mantığı + periyodik worker |
+| `app/MainActivity.kt` | Shred zamanlaması + 3 yeni kanal metodu, `recalledTodayCount`, sessiz saat sayacı düzeltmesi, tek silmede görsel temizliği |
+| `widget/NotificationWidgetProvider.kt` | `getRecent(4)` |
+| `res/values(-tr)/strings.xml` | Native uyarı metinleri (EN + TR) |
+| `domain/models/notification_model.dart` | `recalledAt`, `codeShredded`, `isRecalled` |
+| `domain/models/stats_model.dart` | `recalledTodayCount` |
+| `data/repositories/notification_repository.dart` | Shred kanal metotları + yeni istatistik |
+| `data/services/backup_service.dart` | Rastgele IV + yeni alanların yedeklenmesi |
+| `presentation/providers/notification_provider.dart` | `recalled` filtresi + okuma öncesi shred geçişi |
+| `presentation/providers/settings_provider.dart` | `otpShredMinutes` |
+| `presentation/screens/settings_screen.dart` | Sessiz Saatler anahtarı düzeltmesi + Kod İmha kartı |
+| `presentation/screens/archive_screen.dart` | Çip metinleri yerelleştirildi + geri çekilen filtresi |
+| `presentation/screens/dashboard_screen.dart` | Geri çekilen sayacı + yerelleştirilmiş sessiz saat satırı |
+| `presentation/screens/apps_screen.dart` | Yerelleştirilmiş "izleniyor" sayacı |
+| `presentation/widgets/notification_card.dart` | Geri çekildi / kod imha edildi rozetleri |
+| `presentation/widgets/notification_detail_sheet.dart` | Geri çekme açıklaması |
+| `lib/l10n/*` | 19 yeni anahtar (EN + TR + üretilmiş dosyalar elle güncellendi) |
+| `test/presentation/providers/notification_provider_test.dart` | **Yeni.** Geri çekme filtresi + shred sırası testleri |
+| `test/...` (model, ayarlar, yedek) | Yeni alanlar, imha penceresi, rastgele IV testleri |
+
+## G. Doğrulanmış ve olduğu gibi çalışan iddialar
+
+Kanal metotlarının tamamı iki tarafta da eşleşiyor; tarih aralığı seçici,
+çoklu etiket, yıldızlama, 5 kademeli tarih gruplaması, ısı haritası, `fl_chart`
+grafikleri, uygulama başına susturma, CSV/JSON dışa aktarma, yedek geri yükleme,
+ana ekran widget'ı, biyometrik kilit ve ARB dosyalarının EN/TR eşleşmesi
+doğrulandı — hepsi README'de anlatıldığı gibi.
+
+## H. Düzeltilmeyen, bilinçli olarak bırakılan noktalar
+
+- `fallbackToDestructiveMigration()` hâlâ açık: eksik bir migration yolunda
+  kullanıcının arşivini sessizce siler. Bir "kasa" için riskli ama davranış
+  değişikliği olacağı için dokunulmadı
+- Biyometrik kilit yalnızca **soğuk açılışta** soruluyor; uygulama arka plandan
+  dönünce tekrar sormuyor
+- Yedek anahtarı hâlâ düz SHA-256 (PBKDF2/Argon2 değil) — README'de artık
+  açıkça yazıyor
+- Kotlin katmanının otomatik testi yok
