@@ -595,3 +595,124 @@ doğrulandı — hepsi README'de anlatıldığı gibi.
 - Yedek anahtarı hâlâ düz SHA-256 (PBKDF2/Argon2 değil) — README'de artık
   açıkça yazıyor
 - Kotlin katmanının otomatik testi yok
+
+---
+
+# Faz 11 — Bilinen Sınırlamaların Kapatılması
+
+Faz 10'da "düzeltilmedi, bilinçli bırakıldı" diye yazdığım maddelerin üçünü
+kapattım. Bu sefer her şey **gerçek araç zinciriyle** doğrulandı: Flutter
+`D:\flutter` altında kuruluymuş (PATH'teki `C:\flutter\bin` bayat olduğu için
+önceki fazlarda bulunamamıştı).
+
+## A. Kasa artık gerçekten kilitleniyor
+
+`BiometricLockScreen` bir kez açılınca uygulama süreci boyunca açık kalıyordu.
+Yani uygulamayı arka plana atıp saatler sonra geri dönmek — işletim sistemi
+süreci öldürmediyse — arşivi hiçbir doğrulama olmadan gösteriyordu. Bir kasanın
+açılış başına bir kez sorması, kasa olmaması demek.
+
+- `WidgetsBindingObserver` eklendi; uygulama **30 saniyeden uzun** arka planda
+  kalırsa kilit geri geliyor
+- Sıfır değil bilinçli olarak: yakalanan bir kodu başka uygulamaya yazmak ya da
+  yedek dosyası seçmek uygulamayı kısa süre arka plana atıyor; her dönüşte parmak
+  izi istemek uygulamayı kendi temel kullanım senaryosuna düşman hâle getirirdi
+- Sayaç yalnızca `unlocked` durumundayken kuruluyor. Sistemin biyometrik
+  penceresi de uygulamayı ön plandan alıyor ama o pencere yalnızca **kilitliyken**
+  açıldığı için ortada bozacağı bir açık kilit olmuyor — döngü riski böyle
+  kapatıldı
+- `AppLifecycleState.inactive` (bildirim gölgesi, gelen arama afişi) arka plan
+  sayılmıyor
+- Zamanlama kuralı `BiometricLockScreen.shouldRelock` olarak ayrıldı ve sahte bir
+  biyometrik kanal kurmadan sınır değerleriyle test edildi
+
+## B. Yedek anahtarı: düz SHA-256 → PBKDF2
+
+Eski `NKENC1` biçimi anahtarı parolanın **tuzsuz, tek turluk** SHA-256'sıyla
+üretiyordu. Yedek dosyasını ele geçiren biri parola adaylarını ham hash hızında
+deneyebiliyordu ve önceden hesaplanmış bir tablo tüm kullanıcılara aynı anda
+işliyordu.
+
+Yeni `NKENC2` biçimi: PBKDF2-HMAC-SHA256, **120.000 tur**, dosya başına rastgele
+**16 baytlık tuz**.
+
+```
+NKPLAIN1:<json>
+NKENC2:<tur sayısı>:<b64 tuz>:<b64 iv>:<b64 şifreli metin>   (güncel)
+NKENC1:<b64 iv>:<b64 şifreli metin>                          (eski, yalnız okuma)
+```
+
+- Tur sayısı ve tuz **dosyanın içinde** duruyor, okuyucuya gömülü değil — ileride
+  tur sayısı yükseltilince eski yedekler ortada kalmıyor
+- **Eski `NKENC1` yedekleri açılmaya devam ediyor.** Bunun için iki regresyon
+  testi yazıldı: doğru parolayla geri yükleniyor, yanlış parolayla temiz şekilde
+  hata veriyor
+- `pointycastle` zaten `encrypt` üzerinden dolaylı olarak geliyordu; doğrudan
+  import edildiği için `pubspec.yaml`'a açıkça eklendi
+
+## C. İkiz stats sınıfları birleştirildi
+
+Faz 10'un derleme hatasının kökü buydu: projede iki paralel istatistik yolu
+vardı.
+
+- `domain/models/stats_model.dart` → `StatsModel` (repository üzerinden)
+- `presentation/providers/stats_provider.dart` → `AppStats` + kendi
+  `MethodChannel` çağrısı + ikinci bir `DailyCount` sınıfı
+
+Dashboard `AppStats`'i kullanıyordu, `StatsModel` ise kendi testi dışında hiçbir
+yerden çağrılmıyordu. Bir alan yalnızca birine eklenince ikisi anında ayrıştı.
+
+`AppStats` ve kopya `DailyCount` silindi; `StatsProvider` artık diğer üç provider
+gibi repository üzerinden gidiyor ve `StatsModel` tek tanım. Bu arada
+`getStats` çözümlemesi sertleştirildi: eksik ya da beklenmedik tipteki tek bir
+alan artık tüm dashboard'u boşaltmak yerine sıfıra düşüyor (eski
+`StatsProvider` kopyası bu konuda daha toleranslıydı, o tolerans korundu).
+
+**Davranış değişikliği:** "Top Apps" listesi artık gerçekten ilk 5'i gösteriyor.
+`AppStats.topApps` sıralı listenin **tamamını** döndürüyordu, yani başlık "Top
+Apps" olmasına rağmen bildirim göndermiş her uygulama tek tek kart olarak
+çiziliyordu.
+
+## D. Analyzer temizlendi (36 → 0)
+
+`flutter analyze` artık **hiç uyarı vermiyor**.
+
+- 31 × `avoid_print` → `debugPrint` (yayın derlemesinde susuyor, `print` susmuyor)
+- `app_detail_screen.dart`'ta kullanılmayan `glass_card.dart` import'u
+- 2 × gereksiz `${}` string interpolasyonu
+- `AnimatedBuilder(builder: (_, __))` → `(context, _)`
+- Testte gereksiz `dart:typed_data` import'u
+- `backup_service.dart` doc yorumundaki `<json>` HTML olarak yorumlanıyordu →
+  kod bloğuna alındı
+
+## E. Doğrulama
+
+| Kontrol | Sonuç |
+|---|---|
+| `flutter analyze` | **No issues found!** (önce 36) |
+| `flutter test` | **83/83 geçti** (önce 74) |
+| `flutter build apk --release` | Başarılı |
+| `flutter gen-l10n` | Depodaki üretilmiş dosyalarla bayt bayt aynı |
+
+## F. Eklenen / değişen dosyalar (Faz 11)
+
+| Dosya | Değişiklik |
+|---|---|
+| `presentation/screens/biometric_lock_screen.dart` | Otomatik yeniden kilitleme + test edilebilir `shouldRelock` |
+| `data/services/backup_service.dart` | PBKDF2 (`NKENC2`), eski `NKENC1` geriye dönük okuma |
+| `presentation/providers/stats_provider.dart` | `AppStats`/`DailyCount` kopyaları silindi, repository'ye geçildi |
+| `data/repositories/notification_repository.dart` | `getStats` sertleştirildi, `debugPrint` |
+| `presentation/screens/app_detail_screen.dart` | Kullanılmayan import + lint |
+| `presentation/providers/notification_provider.dart`, `app_list_provider.dart` | `debugPrint` |
+| `pubspec.yaml` | `pointycastle` doğrudan bağımlılık |
+| `test/presentation/screens/biometric_lock_screen_test.dart` | **Yeni.** Yeniden kilitlenme zamanlaması |
+| `test/data/services/backup_service_test.dart` | Tuz/tur testleri + eski biçim regresyonları |
+| `README.md` | Kasa, yedek şifrelemesi, teknoloji tablosu, test bölümü |
+
+## G. Hâlâ açık bırakılanlar
+
+- Şifreli yedeklerde **kimlik doğrulama yok** (HMAC/AEAD). Yanlış parola dolgu ve
+  JSON hatasından yakalanıyor, MAC'ten değil; kurcalanmış bir dosya ancak
+  ayrıştırılamazsa fark ediliyor
+- `fallbackToDestructiveMigration()` hâlâ açık
+- Kotlin katmanının otomatik testi yok

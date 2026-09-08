@@ -10,22 +10,51 @@ import '../../l10n/generated/app_localizations.dart';
 /// Settings. `local_auth`'s authenticate() call falls back to the device's
 /// PIN/pattern/password automatically when no biometric is enrolled or the
 /// hardware isn't available, so no separate custom PIN UI is needed.
+///
+/// The vault also re-locks itself: unlocking used to last for the whole app
+/// process, so anything that reached the app switcher - or simply reopening the
+/// app hours later without the OS having killed it - showed the archive with no
+/// authentication at all. A vault that only asks once per boot is not a vault.
+/// Leaving the app for longer than [relockAfter] now clears the unlock.
 class BiometricLockScreen extends StatefulWidget {
   final Widget child;
 
   const BiometricLockScreen({super.key, required this.child});
+
+  /// How long the app may sit in the background before the vault re-locks.
+  ///
+  /// Not zero: glancing at another app to type a captured code, or picking a
+  /// backup file, briefly backgrounds this one, and demanding a fingerprint on
+  /// every return would make the app hostile to its own core use case. Half a
+  /// minute is the usual compromise for password managers.
+  static const Duration relockAfter = Duration(seconds: 30);
+
+  /// Whether an app that went to the background at [since] should be asked to
+  /// authenticate again now. Split out from the lifecycle handler so the timing
+  /// rule can be tested without standing up a fake biometric platform channel.
+  ///
+  /// A null [since] means the app was never backgrounded while unlocked - which
+  /// is also the case while the system biometric sheet is on screen, since that
+  /// only ever happens while we are still locked.
+  static bool shouldRelock(DateTime? since, DateTime now) {
+    if (since == null) return false;
+    return now.difference(since) >= relockAfter;
+  }
 
   @override
   State<BiometricLockScreen> createState() => _BiometricLockScreenState();
 }
 
 class _BiometricLockScreenState extends State<BiometricLockScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final LocalAuthentication _auth = LocalAuthentication();
 
   // 'idle' | 'authenticating' | 'unlocked' | 'denied' | 'error'
   String _state = 'idle';
   String _errorMsg = '';
+
+  /// When the app was last backgrounded *while already unlocked*.
+  DateTime? _backgroundedAt;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnim;
@@ -33,6 +62,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -47,8 +77,43 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pulseController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // Only ever arm the timer while the vault is actually open. This is what
+    // keeps the system biometric prompt from re-locking us: that prompt takes
+    // the app out of the foreground too, but it only ever appears while we are
+    // still locked, so there is no unlock for it to clobber.
+    if (_state != 'unlocked') return;
+
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.detached:
+        _backgroundedAt ??= DateTime.now();
+        break;
+      case AppLifecycleState.resumed:
+        final since = _backgroundedAt;
+        _backgroundedAt = null;
+        if (BiometricLockScreen.shouldRelock(since, DateTime.now())) {
+          setState(() {
+            _state = 'idle';
+            _errorMsg = '';
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) => _authenticate());
+        }
+        break;
+      case AppLifecycleState.inactive:
+        // Transient (notification shade pulled down, incoming call banner, the
+        // biometric sheet itself). Deliberately not treated as backgrounded.
+        break;
+    }
   }
 
   Future<void> _authenticate() async {
@@ -126,7 +191,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
               children: [
                 AnimatedBuilder(
                   animation: _pulseAnim,
-                  builder: (_, __) {
+                  builder: (context, _) {
                     return Transform.scale(
                       scale: _state == 'authenticating' ? _pulseAnim.value : 1.0,
                       child: Container(

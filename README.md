@@ -49,6 +49,7 @@ Two things set it apart from a plain notification log: the **[Recall Radar](#-12
 
 ### 🔐 4. Biometric Security Vault
 - **App Lock**: Protect your sensitive notification history using Fingerprint, Face Unlock, or Device PIN (`BiometricPrompt` & `local_auth`).
+- **Auto Re-Lock**: The vault re-locks itself after the app has been in the background for 30 seconds — it is not a once-per-boot prompt. Short enough to be a real lock, long enough that hopping to another app to type a captured code does not demand a fingerprint on the way back.
 - **Configurable Protection**: Toggle security on/off directly from Settings.
 
 ### 📊 5. Comprehensive Analytics & Heatmap
@@ -75,7 +76,7 @@ Two things set it apart from a plain notification log: the **[Recall Radar](#-12
 
 ### 💾 9. Backup, Restore & Export
 - **Encrypted Round-Trip Backups**: Export your entire archive, settings, and keyword radar to a portable `.nkbackup` file.
-- **AES-256-CBC Encryption**: Secure your backup with optional password-based encryption.
+- **AES-256-CBC Encryption**: Optional passphrase protection, with the key stretched through PBKDF2-HMAC-SHA256 over a per-file random salt.
 - **Data Export**: Export notification records to **CSV** or **JSON** for external audits or spreadsheets.
 
 ### 📱 10. Native Home Screen Widget
@@ -151,7 +152,7 @@ flowchart TD
 | **Local Database** | Native Android **Room ORM** (v7 schema migration pipeline) |
 | **Background Tasks** | Android Jetpack **WorkManager** (`androidx.work:work-runtime-ktx`) |
 | **State Management** | [Provider](https://pub.dev/packages/provider) (`^6.1.5`) |
-| **Security & Auth** | [local_auth](https://pub.dev/packages/local_auth), [encrypt](https://pub.dev/packages/encrypt) (AES-256), [crypto](https://pub.dev/packages/crypto) (SHA-256) |
+| **Security & Auth** | [local_auth](https://pub.dev/packages/local_auth), [encrypt](https://pub.dev/packages/encrypt) (AES-256), [pointycastle](https://pub.dev/packages/pointycastle) (PBKDF2-HMAC-SHA256), [crypto](https://pub.dev/packages/crypto) (SHA-256) |
 | **Charts & Visuals** | [fl_chart](https://pub.dev/packages/fl_chart), [shimmer](https://pub.dev/packages/shimmer), [google_fonts](https://pub.dev/packages/google_fonts) |
 | **Localization** | `flutter_localizations`, ARB generation (`app_en.arb`, `app_tr.arb`) |
 | **File I/O & Sharing** | [file_picker](https://pub.dev/packages/file_picker), [share_plus](https://pub.dev/packages/share_plus), [path_provider](https://pub.dev/packages/path_provider) |
@@ -161,15 +162,15 @@ flowchart TD
 ## 🔒 Security & Privacy-First Architecture
 
 1. **Zero Cloud Dependencies**: The app operates completely offline. No tracking SDKs, no analytics endpoints, no third-party ads.
-2. **Encrypted Backups**: Backup files (`.nkbackup`) can be encrypted with AES-256-CBC under a key derived via SHA-256 from your passphrase, using a **randomly generated IV per backup** (stored in the file, as IVs are meant to be).
-3. **Biometric Guard**: Biometric authentication uses Android's native `BiometricPrompt` via `FlutterFragmentActivity`, ensuring cryptographic biometric verification with device PIN fallback.
+2. **Encrypted Backups**: Backup files (`.nkbackup`) can be encrypted with AES-256-CBC under a key derived with **PBKDF2-HMAC-SHA256 (120,000 iterations, random 16-byte salt)**, plus a randomly generated IV per backup. The salt and iteration count travel in the file, so the cost can be raised later without stranding existing backups — and files written by older versions (unsalted SHA-256) still restore.
+3. **Biometric Guard**: Biometric authentication uses Android's native `BiometricPrompt` via `FlutterFragmentActivity`, ensuring cryptographic biometric verification with device PIN fallback, and re-locks automatically after 30 seconds in the background.
 4. **Sandboxed Media**: Cached notification images are stored in `context.filesDir/notification_images/`—isolated from the public gallery and invisible to other apps.
 5. **Ephemeral Secrets**: With the [Code Shredder](#-13-code-shredder--ephemeral-verification-codes) enabled, captured verification codes are destroyed in place once they expire, so an old archive stops being a liability.
 
 ### Known limits, stated plainly
-- The backup key is a plain **SHA-256 of the passphrase**, not a salted PBKDF2/Argon2 KDF. That is a real step up from an unencrypted file, but it is cheaper to brute-force than a proper KDF — choose a long passphrase, and treat a backup file as sensitive.
-- The **biometric vault unlocks per app process**: it is asked for on a cold start, not every time the app returns from the background.
 - **Recall Radar is a heuristic** (see feature 12) — a strong signal that a message was withdrawn, not a guarantee.
+- Encrypted backups are **not authenticated** (no HMAC/AEAD). A wrong passphrase is caught by padding and JSON validation rather than by a MAC, and a tampered file is detected only if it fails to parse.
+- The **Kotlin layer has no automated tests**. The listener, the workers and the Room migrations are covered by manual device testing only.
 
 ---
 
@@ -270,10 +271,13 @@ flutter test
 Test suite includes:
 - **`notification_model_test.dart`**: Model deserialization, copyWith, tags, OTP flags, plus the Recall Radar / Code Shredder columns (including rows written before the v7 migration).
 - **`notification_provider_test.dart`**: Archive filtering, the `recalled` filter mode, and the guarantee that the shred pass runs *before* the archive is read — and never blocks it if it fails.
-- **`backup_service_test.dart`**: AES-256 encryption & decryption round-trip, per-backup random IV, invalid passphrase rejection, corruption handling.
+- **`backup_service_test.dart`**: AES-256 round-trip, per-backup random salt and IV, restoring legacy (pre-PBKDF2) backups, invalid passphrase rejection, corruption handling.
 - **`settings_provider_test.dart`**: SharedPreferences persistence for retention days, keyword radar, biometric flags, and the code-shred window.
 - **`app_info_model_test.dart`** / **`stats_model_test.dart`**: App preferences, snooze state, and dashboard aggregates.
+- **`biometric_lock_screen_test.dart`**: The vault auto-re-lock timing rule, including its boundaries.
 - **`recent_codes_widget_test.dart`**: OTP filtering, copy-to-clipboard actions, and auto-masking timer.
+
+`flutter analyze` is clean — zero infos, warnings or errors.
 
 > The Kotlin layer (listener, workers, Room migrations) has no automated tests. Migration `v6 → v7` in particular is worth exercising once on a device that already has data before shipping.
 

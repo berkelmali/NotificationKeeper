@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
+import 'package:crypto/crypto.dart';
+import 'package:encrypt/encrypt.dart' as enc;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app/data/repositories/notification_repository.dart';
@@ -92,7 +95,7 @@ void main() {
       expect(content, contains('123456'));
     });
 
-    test('writes an encrypted file (NKENC1: header) when a passphrase is given, '
+    test('writes an encrypted file (NKENC2: header) when a passphrase is given, '
         'and the plaintext content is not visible anywhere in the file', () async {
       final service = BackupService(NotificationRepository());
       final path = await service.createBackup(
@@ -101,7 +104,7 @@ void main() {
       );
 
       final content = await File(path).readAsString();
-      expect(content.startsWith('NKENC1:'), true);
+      expect(content.startsWith('NKENC2:'), true);
       // The whole point of encryption: sensitive captured content (like an
       // OTP code) must not appear in cleartext in the encrypted file.
       expect(content, isNot(contains('123456')));
@@ -124,13 +127,39 @@ void main() {
       )).readAsString();
 
       // Both are encrypted...
-      expect(first.startsWith('NKENC1:'), true);
-      expect(second.startsWith('NKENC1:'), true);
+      expect(first.startsWith('NKENC2:'), true);
+      expect(second.startsWith('NKENC2:'), true);
       // ...with different IVs, so the payloads cannot match.
-      final firstIv = first.substring('NKENC1:'.length).split(':')[0];
-      final secondIv = second.substring('NKENC1:'.length).split(':')[0];
+      // NKENC2:<iterations>:<salt>:<iv>:<ciphertext> - the IV is field 2.
+      final firstIv = first.substring('NKENC2:'.length).split(':')[2];
+      final secondIv = second.substring('NKENC2:'.length).split(':')[2];
       expect(firstIv, isNot(equals(secondIv)));
       expect(first, isNot(equals(second)));
+    });
+
+    test('writes the current NKENC2 header with a per-file salt and iteration '
+        'count, so the KDF cost can be raised later without stranding old files',
+        () async {
+      final service = BackupService(NotificationRepository());
+
+      final first = await File(await service.createBackup(
+        passphrase: 'salted',
+        directoryOverride: tempDir,
+      )).readAsString();
+      final second = await File(await service.createBackup(
+        passphrase: 'salted',
+        directoryOverride: tempDir,
+      )).readAsString();
+
+      // NKENC2:<iterations>:<salt>:<iv>:<ciphertext>
+      final parts = first.substring('NKENC2:'.length).split(':');
+      expect(parts.length, 4);
+      expect(int.parse(parts[0]), greaterThanOrEqualTo(100000));
+      expect(base64Decode(parts[1]).length, 16);
+
+      // Salt must differ per file, or it is not doing its job.
+      final secondSalt = second.substring('NKENC2:'.length).split(':')[1];
+      expect(parts[1], isNot(equals(secondSalt)));
     });
 
     test('a randomly-IV\'d backup still round-trips with its passphrase', () async {
@@ -221,6 +250,76 @@ void main() {
 
       expect(result.isSuccess, false);
       expect(result.errorMessage, contains('passphrase'));
+    });
+
+    test('a legacy NKENC1 backup (unsalted SHA-256 key, written before the '
+        'PBKDF2 change) still restores - upgrading must not orphan the files '
+        'users already have', () async {
+      // Build a file exactly the way the old implementation did.
+      const passphrase = 'an-old-backup';
+      final payload = jsonEncode({
+        'formatVersion': 1,
+        'exportedAt': '2025-01-01T00:00:00.000',
+        'app': 'Notification Keeper',
+        'notifications': [
+          {
+            'packageName': 'com.whatsapp',
+            'title': 'Alice',
+            'content': 'Hello from the past',
+            'timestamp': 1700000000000,
+            'isGroupSummary': false,
+            'isRead': false,
+            'isStarred': false,
+            'isOtp': false,
+            'isPriorityFlagged': false,
+          }
+        ],
+        'monitoredPackageNames': <String>[],
+        'priorityKeywords': <String>[],
+        'retentionDays': 7,
+      });
+
+      final legacyKey =
+          enc.Key(Uint8List.fromList(sha256.convert(utf8.encode(passphrase)).bytes));
+      final legacyIv = enc.IV.fromLength(16); // the old all-zero IV
+      final legacyCipher = enc
+          .Encrypter(enc.AES(legacyKey, mode: enc.AESMode.cbc))
+          .encrypt(payload, iv: legacyIv);
+
+      final legacyFile = File('${tempDir.path}/legacy.nkbackup');
+      await legacyFile
+          .writeAsString('NKENC1:${legacyIv.base64}:${legacyCipher.base64}');
+
+      final service = BackupService(NotificationRepository());
+      final result = await service.restoreBackup(
+        filePath: legacyFile.path,
+        passphrase: passphrase,
+      );
+
+      expect(result.isSuccess, true);
+      expect(result.restoredCount, 1);
+    });
+
+    test('a legacy NKENC1 backup with the wrong passphrase still fails cleanly',
+        () async {
+      final key =
+          enc.Key(Uint8List.fromList(sha256.convert(utf8.encode('right')).bytes));
+      final iv = enc.IV.fromLength(16);
+      final cipher = enc
+          .Encrypter(enc.AES(key, mode: enc.AESMode.cbc))
+          .encrypt('{"notifications":[]}', iv: iv);
+
+      final legacyFile = File('${tempDir.path}/legacy_wrong.nkbackup');
+      await legacyFile.writeAsString('NKENC1:${iv.base64}:${cipher.base64}');
+
+      final service = BackupService(NotificationRepository());
+      final result = await service.restoreBackup(
+        filePath: legacyFile.path,
+        passphrase: 'wrong',
+      );
+
+      expect(result.isSuccess, false);
+      expect(result.errorMessage, isNotNull);
     });
 
     test('restoring a non-existent file fails gracefully instead of throwing', () async {

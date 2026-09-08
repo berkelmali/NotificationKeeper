@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../../domain/models/notification_model.dart';
 import '../../domain/models/app_info_model.dart';
@@ -12,7 +13,7 @@ class NotificationRepository {
       if (result == null) return [];
       return result.map((e) => NotificationModel.fromMap(e as Map<Object?, Object?>)).toList();
     } on PlatformException catch (e) {
-      print("Failed to get notifications: '${e.message}'.");
+      debugPrint("Failed to get notifications: '${e.message}'.");
       return [];
     }
   }
@@ -25,7 +26,7 @@ class NotificationRepository {
       if (result == null) return [];
       return result.map((e) => NotificationModel.fromMap(e as Map<Object?, Object?>)).toList();
     } on PlatformException catch (e) {
-      print("Failed to get notifications by app: '${e.message}'.");
+      debugPrint("Failed to get notifications by app: '${e.message}'.");
       return [];
     }
   }
@@ -46,28 +47,34 @@ class NotificationRepository {
 
       final appCountsRaw = result['appCounts'] as Map<dynamic, dynamic>? ?? {};
       final appCounts = appCountsRaw.map(
-        (key, value) => MapEntry(key.toString(), (value as num).toInt()),
+        (key, value) => MapEntry(key.toString(), (value as num?)?.toInt() ?? 0),
       );
 
       final dailyCountsRaw = result['dailyCounts'] as List<dynamic>? ?? [];
-      final dailyCounts = dailyCountsRaw.map((e) {
-        final map = e as Map<dynamic, dynamic>;
-        return DailyCount(
-          date: DateTime.fromMillisecondsSinceEpoch((map['date'] as num).toInt()),
-          count: (map['count'] as num).toInt(),
-        );
-      }).toList();
+      final dailyCounts = dailyCountsRaw
+          .whereType<Map<dynamic, dynamic>>()
+          .map((map) => DailyCount(
+                date: DateTime.fromMillisecondsSinceEpoch(
+                    (map['date'] as num?)?.toInt() ?? 0),
+                count: (map['count'] as num?)?.toInt() ?? 0,
+              ))
+          .toList();
 
-      // Hourly counts for heatmap
+      // Hourly counts for heatmap. The key arrives as an int from the platform
+      // codec, but parse defensively: this is now the only stats path in the app
+      // (StatsProvider used to carry a second, more tolerant copy of it), and a
+      // cast failure here would blank the whole dashboard rather than one number.
       final hourlyCountsRaw = result['hourlyCounts'] as Map<dynamic, dynamic>? ?? {};
-      final hourlyCounts = hourlyCountsRaw.map(
-        (key, value) => MapEntry((key as num).toInt(), (value as num).toInt()),
-      );
+      final hourlyCounts = <int, int>{};
+      hourlyCountsRaw.forEach((key, value) {
+        final hour = key is num ? key.toInt() : int.tryParse(key.toString());
+        if (hour != null) hourlyCounts[hour] = (value as num?)?.toInt() ?? 0;
+      });
 
       return StatsModel(
-        totalCount: (result['totalCount'] as num).toInt(),
-        todayCount: (result['todayCount'] as num).toInt(),
-        weekCount: (result['weekCount'] as num).toInt(),
+        totalCount: (result['totalCount'] as num?)?.toInt() ?? 0,
+        todayCount: (result['todayCount'] as num?)?.toInt() ?? 0,
+        weekCount: (result['weekCount'] as num?)?.toInt() ?? 0,
         appCounts: appCounts,
         dailyCounts: dailyCounts,
         hourlyCounts: hourlyCounts,
@@ -77,7 +84,7 @@ class NotificationRepository {
         recalledTodayCount: (result['recalledTodayCount'] as num?)?.toInt() ?? 0,
       );
     } on PlatformException catch (e) {
-      print("Failed to get stats: '${e.message}'.");
+      debugPrint("Failed to get stats: '${e.message}'.");
       return StatsModel(
         totalCount: 0,
         todayCount: 0,
@@ -95,7 +102,7 @@ class NotificationRepository {
       if (result == null) return [];
       return result.map((e) => AppInfoModel.fromMap(e as Map<Object?, Object?>)).toList();
     } on PlatformException catch (e) {
-      print("Failed to get apps: '${e.message}'.");
+      debugPrint("Failed to get apps: '${e.message}'.");
       return [];
     }
   }
@@ -108,7 +115,7 @@ class NotificationRepository {
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print("Failed to toggle app: '${e.message}'.");
+      debugPrint("Failed to toggle app: '${e.message}'.");
       return false;
     }
   }
@@ -120,7 +127,7 @@ class NotificationRepository {
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print("Failed to delete notification: '${e.message}'.");
+      debugPrint("Failed to delete notification: '${e.message}'.");
       return false;
     }
   }
@@ -132,7 +139,7 @@ class NotificationRepository {
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print("Failed to delete old notifications: '${e.message}'.");
+      debugPrint("Failed to delete old notifications: '${e.message}'.");
       return false;
     }
   }
@@ -142,7 +149,7 @@ class NotificationRepository {
       final bool? result = await platform.invokeMethod('deleteAllNotifications');
       return result ?? false;
     } on PlatformException catch (e) {
-      print("Failed to delete all: '${e.message}'.");
+      debugPrint("Failed to delete all: '${e.message}'.");
       return false;
     }
   }
@@ -155,7 +162,7 @@ class NotificationRepository {
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print("Failed to toggle star: '${e.message}'.");
+      debugPrint("Failed to toggle star: '${e.message}'.");
       return false;
     }
   }
@@ -167,7 +174,7 @@ class NotificationRepository {
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print("Failed to mark as read: '${e.message}'.");
+      debugPrint("Failed to mark as read: '${e.message}'.");
       return false;
     }
   }
@@ -181,7 +188,7 @@ class NotificationRepository {
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print("Failed to update tags: '${e.message}'.");
+      debugPrint("Failed to update tags: '${e.message}'.");
       return false;
     }
   }
@@ -198,7 +205,7 @@ class NotificationRepository {
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print("Failed to set quiet hours: '${e.message}'.");
+      debugPrint("Failed to set quiet hours: '${e.message}'.");
       return false;
     }
   }
@@ -211,7 +218,7 @@ class NotificationRepository {
       });
       return path;
     } on PlatformException catch (e) {
-      print("Failed to export: '${e.message}'.");
+      debugPrint("Failed to export: '${e.message}'.");
       return null;
     }
   }
@@ -221,7 +228,7 @@ class NotificationRepository {
       final bool? result = await platform.invokeMethod('isServiceEnabled');
       return result ?? false;
     } on PlatformException catch (e) {
-      print("Failed to check service: '${e.message}'.");
+      debugPrint("Failed to check service: '${e.message}'.");
       return false;
     }
   }
@@ -230,7 +237,7 @@ class NotificationRepository {
     try {
       await platform.invokeMethod('openNotificationSettings');
     } on PlatformException catch (e) {
-      print("Failed to open settings: '${e.message}'.");
+      debugPrint("Failed to open settings: '${e.message}'.");
     }
   }
 
@@ -243,7 +250,7 @@ class NotificationRepository {
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print("Failed to snooze app: '${e.message}'.");
+      debugPrint("Failed to snooze app: '${e.message}'.");
       return false;
     }
   }
@@ -255,7 +262,7 @@ class NotificationRepository {
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print("Failed to unsnooze app: '${e.message}'.");
+      debugPrint("Failed to unsnooze app: '${e.message}'.");
       return false;
     }
   }
@@ -270,7 +277,7 @@ class NotificationRepository {
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print("Failed to update keywords: '${e.message}'.");
+      debugPrint("Failed to update keywords: '${e.message}'.");
       return false;
     }
   }
@@ -280,7 +287,7 @@ class NotificationRepository {
       final List<dynamic>? result = await platform.invokeListMethod('getKeywords');
       return result?.map((e) => e.toString()).toList() ?? [];
     } on PlatformException catch (e) {
-      print("Failed to get keywords: '${e.message}'.");
+      debugPrint("Failed to get keywords: '${e.message}'.");
       return [];
     }
   }
@@ -295,7 +302,7 @@ class NotificationRepository {
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print("Failed to set retention: '${e.message}'.");
+      debugPrint("Failed to set retention: '${e.message}'.");
       return false;
     }
   }
@@ -305,7 +312,7 @@ class NotificationRepository {
       final int? result = await platform.invokeMethod('getRetentionDays');
       return result ?? 0;
     } on PlatformException catch (e) {
-      print("Failed to get retention: '${e.message}'.");
+      debugPrint("Failed to get retention: '${e.message}'.");
       return 0;
     }
   }
@@ -318,7 +325,7 @@ class NotificationRepository {
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print("Failed to set instant alerts: '${e.message}'.");
+      debugPrint("Failed to set instant alerts: '${e.message}'.");
       return false;
     }
   }
@@ -328,7 +335,7 @@ class NotificationRepository {
       final bool? result = await platform.invokeMethod('getInstantAlertsEnabled');
       return result ?? true;
     } on PlatformException catch (e) {
-      print("Failed to get instant alerts: '${e.message}'.");
+      debugPrint("Failed to get instant alerts: '${e.message}'.");
       return true;
     }
   }
@@ -345,7 +352,7 @@ class NotificationRepository {
       });
       return shredded ?? 0;
     } on PlatformException catch (e) {
-      print("Failed to set shred window: '${e.message}'.");
+      debugPrint("Failed to set shred window: '${e.message}'.");
       return 0;
     }
   }
@@ -355,7 +362,7 @@ class NotificationRepository {
       final int? result = await platform.invokeMethod('getOtpShredMinutes');
       return result ?? 0;
     } on PlatformException catch (e) {
-      print("Failed to get shred window: '${e.message}'.");
+      debugPrint("Failed to get shred window: '${e.message}'.");
       return 0;
     }
   }
@@ -367,7 +374,7 @@ class NotificationRepository {
       final int? shredded = await platform.invokeMethod('shredExpiredCodesNow');
       return shredded ?? 0;
     } on PlatformException catch (e) {
-      print("Failed to shred codes: '${e.message}'.");
+      debugPrint("Failed to shred codes: '${e.message}'.");
       return 0;
     }
   }
@@ -387,7 +394,7 @@ class NotificationRepository {
       if (result == null) return [];
       return result.map((e) => NotificationModel.fromMap(e as Map<Object?, Object?>)).toList();
     } on PlatformException catch (e) {
-      print("Failed to search with date range: '${e.message}'.");
+      debugPrint("Failed to search with date range: '${e.message}'.");
       return [];
     }
   }

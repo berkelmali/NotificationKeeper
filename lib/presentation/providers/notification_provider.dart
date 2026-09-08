@@ -58,12 +58,12 @@ class NotificationProvider extends ChangeNotifier {
       try {
         await _repository.shredExpiredCodesNow();
       } catch (e) {
-        print("Shred pass skipped: $e");
+        debugPrint("Shred pass skipped: $e");
       }
       _allNotifications = await _repository.getAllNotifications();
       _applyFilters();
     } catch (e) {
-      print("Error fetching notifications: $e");
+      debugPrint("Error fetching notifications: $e");
     } finally {
       _isLoading = false;
       notifyListeners();

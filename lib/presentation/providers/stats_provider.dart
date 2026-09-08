@@ -1,55 +1,25 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
+import '../../data/repositories/notification_repository.dart';
 import '../../domain/models/notification_model.dart';
+import '../../domain/models/stats_model.dart';
 
-class DailyCount {
-  final DateTime date;
-  final int count;
-  DailyCount({required this.date, required this.count});
-}
-
-class AppStats {
-  final int totalCount;
-  final int todayCount;
-  final int weekCount;
-  final int otpCountToday;
-  final int priorityCountToday;
-  final int quietHoursSkippedToday;
-
-  /// New feature A: messages withdrawn by their sender today.
-  final int recalledTodayCount;
-  final Map<String, int> appCounts;
-  final List<DailyCount> dailyCounts;
-  final Map<int, int> hourlyCounts;
-
-  AppStats({
-    required this.totalCount,
-    required this.todayCount,
-    required this.weekCount,
-    required this.otpCountToday,
-    required this.priorityCountToday,
-    required this.quietHoursSkippedToday,
-    this.recalledTodayCount = 0,
-    required this.appCounts,
-    required this.dailyCounts,
-    required this.hourlyCounts,
-  });
-
-  List<MapEntry<String, int>> get topApps {
-    final list = appCounts.entries.toList();
-    list.sort((a, b) => b.value.compareTo(a.value));
-    return list;
-  }
-}
-
+/// Dashboard statistics.
+///
+/// This used to carry its own `AppStats` and `DailyCount` classes plus a second,
+/// independent `MethodChannel` call to `getStats` - a parallel copy of
+/// [StatsModel] and [NotificationRepository.getStats]. The two drifted apart the
+/// moment a field was added to only one of them (see the `recalledTodayCount`
+/// build break), so the duplicate has been removed: this provider now goes
+/// through the repository like every other provider in the app, and [StatsModel]
+/// is the single definition of what a stats payload contains.
 class StatsProvider with ChangeNotifier {
-  static const _channel = MethodChannel('com.example.notification_keeper/notifications');
+  final NotificationRepository _repository = NotificationRepository();
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  AppStats? _stats;
-  AppStats? get stats => _stats;
+  StatsModel? _stats;
+  StatsModel? get stats => _stats;
 
   List<int> _hourlyActivity = List.filled(24, 0);
   List<int> get hourlyActivity => _hourlyActivity;
@@ -62,55 +32,8 @@ class StatsProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _channel.invokeMethod('getStats');
-      if (result != null && result is Map) {
-        final rawAppCounts = result['appCounts'] as Map?;
-        final appCountsMap = <String, int>{};
-        if (rawAppCounts != null) {
-          rawAppCounts.forEach((key, value) {
-            appCountsMap[key.toString()] = (value as num).toInt();
-          });
-        }
-
-        final rawDaily = result['dailyCounts'] as List?;
-        final dailyList = <DailyCount>[];
-        if (rawDaily != null) {
-          for (var item in rawDaily) {
-            if (item is Map) {
-              final ms = (item['date'] as num?)?.toInt() ?? 0;
-              final count = (item['count'] as num?)?.toInt() ?? 0;
-              dailyList.add(DailyCount(
-                date: DateTime.fromMillisecondsSinceEpoch(ms),
-                count: count,
-              ));
-            }
-          }
-        }
-
-        final rawHourly = result['hourlyCounts'] as Map?;
-        final hourlyMap = <int, int>{};
-        if (rawHourly != null) {
-          rawHourly.forEach((key, value) {
-            final h = int.tryParse(key.toString()) ?? 0;
-            hourlyMap[h] = (value as num).toInt();
-          });
-        }
-
-        _stats = AppStats(
-          totalCount: (result['totalCount'] as num?)?.toInt() ?? 0,
-          todayCount: (result['todayCount'] as num?)?.toInt() ?? 0,
-          weekCount: (result['weekCount'] as num?)?.toInt() ?? 0,
-          otpCountToday: (result['otpCountToday'] as num?)?.toInt() ?? 0,
-          priorityCountToday: (result['priorityCountToday'] as num?)?.toInt() ?? 0,
-          quietHoursSkippedToday: (result['quietHoursSkippedToday'] as num?)?.toInt() ?? 0,
-          recalledTodayCount: (result['recalledTodayCount'] as num?)?.toInt() ?? 0,
-          appCounts: appCountsMap,
-          dailyCounts: dailyList,
-          hourlyCounts: hourlyMap,
-        );
-
-        _updateHourlyData();
-      }
+      _stats = await _repository.getStats();
+      _updateHourlyData();
     } catch (e) {
       debugPrint('Error fetching stats: $e');
     } finally {
