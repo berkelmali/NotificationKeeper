@@ -59,6 +59,11 @@ dependencies:
   encrypt: ^5.0.3
   crypto: ^3.0.5
 
+  # New: salted PBKDF2 key derivation for encrypted backups (replaces a bare
+  # SHA-256 of the passphrase). Already present transitively via `encrypt`;
+  # declared explicitly because it is now imported directly.
+  pointycastle: ^3.9.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

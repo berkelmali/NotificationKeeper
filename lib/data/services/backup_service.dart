@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:path_provider/path_provider.dart';
+import 'package:pointycastle/export.dart' as pc;
 import '../repositories/notification_repository.dart';
 
 /// New feature: real round-trip backup/restore, with optional passphrase-based
@@ -11,28 +13,63 @@ import '../repositories/notification_repository.dart';
 /// they're portable and future-proof, rather than raw DB files.
 ///
 /// File format: a short plaintext header, then either the raw JSON or an
-/// encrypted payload:
-///   "NKPLAIN1:" + <json>
-///   "NKENC1:"   + base64(iv) + ":" + base64(ciphertext)
+/// encrypted payload.
 ///
-/// The passphrase is hashed with SHA-256 to derive an AES-256 key. This is
-/// simpler than a proper PBKDF2/Argon2 KDF and gives up some brute-force
-/// resistance for a much smaller, easier-to-verify implementation - it's a
-/// reasonable step up from an unencrypted file, but a determined attacker
-/// with the file and lots of compute is a threat model this doesn't fully
-/// address. Flagged here and in the changelog rather than glossed over.
+/// ```text
+/// NKPLAIN1:<json>
+/// NKENC2:<iterations>:<b64 salt>:<b64 iv>:<b64 ciphertext>   (current)
+/// NKENC1:<b64 iv>:<b64 ciphertext>                           (legacy, read-only)
+/// ```
+///
+/// ## Key derivation
+///
+/// `NKENC2` derives the AES-256 key with PBKDF2-HMAC-SHA256 over a random
+/// 16-byte salt. The old `NKENC1` format used a bare SHA-256 of the passphrase:
+/// one hash invocation, no salt, so an attacker holding a backup file could try
+/// candidate passphrases at the speed of raw hashing, and a precomputed table
+/// worked against every user at once. PBKDF2 makes each guess cost
+/// [_pbkdf2Iterations] hash rounds and the salt makes the work per-file.
+///
+/// The iteration count and salt are stored in the file rather than hardcoded in
+/// the reader, so the count can be raised later without stranding backups that
+/// were written under the old one. `NKENC1` files still restore - they carry
+/// their own parameters too, just weaker ones.
 class BackupService {
   final NotificationRepository repository;
 
   BackupService(this.repository);
 
   static const String _plainHeader = 'NKPLAIN1:';
-  static const String _encHeader = 'NKENC1:';
+
+  /// Legacy header: unsalted SHA-256 key derivation. Read, never written.
+  static const String _legacyEncHeader = 'NKENC1:';
+
+  /// Current header: salted PBKDF2 key derivation.
+  static const String _encHeader = 'NKENC2:';
+
   static const int _backupFormatVersion = 1;
 
-  enc.Key _deriveKey(String passphrase) {
+  /// Chosen so a wrong-guess attempt costs real work while a legitimate
+  /// restore on a mid-range phone still finishes in well under a second -
+  /// PBKDF2 here is pure Dart, not a native implementation.
+  static const int _pbkdf2Iterations = 120000;
+  static const int _saltLength = 16;
+
+  /// Legacy `NKENC1` derivation. Kept only so older backups keep restoring.
+  enc.Key _deriveLegacyKey(String passphrase) {
     final hash = sha256.convert(utf8.encode(passphrase));
     return enc.Key(Uint8List.fromList(hash.bytes));
+  }
+
+  enc.Key _deriveKey(String passphrase, Uint8List salt, int iterations) {
+    final derivator = pc.PBKDF2KeyDerivator(pc.HMac(pc.SHA256Digest(), 64))
+      ..init(pc.Pbkdf2Parameters(salt, iterations, 32));
+    return enc.Key(derivator.process(Uint8List.fromList(utf8.encode(passphrase))));
+  }
+
+  Uint8List _randomBytes(int length) {
+    final random = Random.secure();
+    return Uint8List.fromList(List<int>.generate(length, (_) => random.nextInt(256)));
   }
 
   /// Gathers notifications + settings and writes a backup file to a
@@ -89,19 +126,19 @@ class BackupService {
 
     String fileContent;
     if (passphrase != null && passphrase.isNotEmpty) {
-      final key = _deriveKey(passphrase);
-      // BUG FIX: this used to be IV.fromLength(16), which is a block of zero
-      // bytes, not a random IV. Combined with a key derived deterministically
-      // from the passphrase, that made AES-CBC deterministic: the same archive
-      // encrypted twice produced byte-identical files, and two backups sharing
-      // a passphrase leaked how much of their content was identical from the
-      // front. The IV is public by design and is already written into the file,
-      // so generating a fresh random one costs nothing and old backups keep
-      // restoring - they simply carry their own (zero) IV with them.
+      final salt = _randomBytes(_saltLength);
+      final key = _deriveKey(passphrase, salt, _pbkdf2Iterations);
+      // The IV used to be IV.fromLength(16) - a block of zero bytes, not a
+      // random IV. With a deterministic key that made AES-CBC deterministic:
+      // the same archive encrypted twice produced byte-identical files, and two
+      // backups sharing a passphrase leaked how much of their content matched
+      // from the front. Both the IV and the salt are public by design and ride
+      // along in the file, so generating them fresh costs nothing.
       final iv = enc.IV.fromSecureRandom(16);
       final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
       final encrypted = encrypter.encrypt(jsonString, iv: iv);
-      fileContent = '$_encHeader${iv.base64}:${encrypted.base64}';
+      fileContent = '$_encHeader$_pbkdf2Iterations:'
+          '${base64Encode(salt)}:${iv.base64}:${encrypted.base64}';
     } else {
       fileContent = '$_plainHeader$jsonString';
     }
@@ -130,21 +167,46 @@ class BackupService {
     final rawContent = await file.readAsString();
     String jsonString;
 
-    if (rawContent.startsWith(_encHeader)) {
+    final isCurrentFormat = rawContent.startsWith(_encHeader);
+    final isLegacyFormat = rawContent.startsWith(_legacyEncHeader);
+
+    if (isCurrentFormat || isLegacyFormat) {
       if (passphrase == null || passphrase.isEmpty) {
         return BackupRestoreResult.failure(
             'This backup is encrypted. Enter the passphrase to restore it.');
       }
       try {
-        final payload = rawContent.substring(_encHeader.length);
-        final parts = payload.split(':');
-        if (parts.length != 2) {
-          return BackupRestoreResult.failure('Backup file looks corrupted.');
+        final enc.Key key;
+        final enc.IV iv;
+        final String ciphertext;
+
+        if (isCurrentFormat) {
+          // NKENC2:<iterations>:<salt>:<iv>:<ciphertext>
+          final parts = rawContent.substring(_encHeader.length).split(':');
+          if (parts.length != 4) {
+            return BackupRestoreResult.failure('Backup file looks corrupted.');
+          }
+          final iterations = int.tryParse(parts[0]);
+          if (iterations == null || iterations <= 0) {
+            return BackupRestoreResult.failure('Backup file looks corrupted.');
+          }
+          key = _deriveKey(passphrase, base64Decode(parts[1]), iterations);
+          iv = enc.IV.fromBase64(parts[2]);
+          ciphertext = parts[3];
+        } else {
+          // NKENC1:<iv>:<ciphertext> - written by versions before the KDF
+          // change. Still restorable; only new backups get the stronger one.
+          final parts = rawContent.substring(_legacyEncHeader.length).split(':');
+          if (parts.length != 2) {
+            return BackupRestoreResult.failure('Backup file looks corrupted.');
+          }
+          key = _deriveLegacyKey(passphrase);
+          iv = enc.IV.fromBase64(parts[0]);
+          ciphertext = parts[1];
         }
-        final iv = enc.IV.fromBase64(parts[0]);
-        final key = _deriveKey(passphrase);
+
         final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
-        jsonString = encrypter.decrypt64(parts[1], iv: iv);
+        jsonString = encrypter.decrypt64(ciphertext, iv: iv);
       } catch (e) {
         return BackupRestoreResult.failure(
             'Could not decrypt this backup. Wrong passphrase, or the file is corrupted.');

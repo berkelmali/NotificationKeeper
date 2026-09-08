@@ -4,7 +4,6 @@ import '../../data/repositories/notification_repository.dart';
 import '../../domain/models/notification_model.dart';
 import '../../domain/models/app_info_model.dart';
 import '../theme/app_colors.dart';
-import '../widgets/glass_card.dart';
 import '../widgets/notification_card.dart';
 import '../widgets/notification_detail_sheet.dart';
 import '../widgets/shimmer_loading.dart';
@@ -63,7 +62,7 @@ class _AppDetailScreenState extends State<AppDetailScreen>
     try {
       _notifications = await _repo.getNotificationsByApp(widget.packageName);
     } catch (e) {
-      print("Error loading app notifications: $e");
+      debugPrint("Error loading app notifications: $e");
     }
     setState(() => _isLoading = false);
     _animController.forward();
@@ -267,14 +266,14 @@ class _AppDetailScreenState extends State<AppDetailScreen>
                     const SizedBox(width: 12),
                     _MiniStat(
                       label: l10n.statToday,
-                      value: '${_todayCount}',
+                      value: '$_todayCount',
                       icon: Icons.today_rounded,
                       color: AppColors.accent,
                     ),
                     const SizedBox(width: 12),
                     _MiniStat(
                       label: l10n.statStarred,
-                      value: '${_starredCount}',
+                      value: '$_starredCount',
                       icon: Icons.star_rounded,
                       color: AppColors.warning,
                     ),

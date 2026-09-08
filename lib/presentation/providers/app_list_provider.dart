@@ -24,7 +24,7 @@ class AppListProvider extends ChangeNotifier {
       _allApps = await _repository.getMonitoredApps();
       _applyFilters();
     } catch (e) {
-      print("Error fetching apps: $e");
+      debugPrint("Error fetching apps: $e");
     } finally {
       _isLoading = false;
       notifyListeners();
