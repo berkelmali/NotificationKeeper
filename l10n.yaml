@@ -2,11 +2,10 @@
 # Running `flutter gen-l10n` (automatic during `flutter pub get` / build when
 # `generate: true` is set in pubspec.yaml) reads the ARB files below and
 # generates lib/l10n/generated/app_localizations.dart automatically - that
-# generated file is intentionally NOT included in this patch, your own build
-# will produce it.
+# generated file is checked in under lib/l10n/generated/ so the repo builds
+# without a code-generation step; re-run `flutter gen-l10n` after editing an ARB.
 arb-dir: lib/l10n
 template-arb-file: app_en.arb
 output-localization-file: app_localizations.dart
 output-class: AppLocalizations
-synthetic-package: false
 output-dir: lib/l10n/generated

@@ -15,6 +15,9 @@ class AppStats {
   final int otpCountToday;
   final int priorityCountToday;
   final int quietHoursSkippedToday;
+
+  /// New feature A: messages withdrawn by their sender today.
+  final int recalledTodayCount;
   final Map<String, int> appCounts;
   final List<DailyCount> dailyCounts;
   final Map<int, int> hourlyCounts;
@@ -26,6 +29,7 @@ class AppStats {
     required this.otpCountToday,
     required this.priorityCountToday,
     required this.quietHoursSkippedToday,
+    this.recalledTodayCount = 0,
     required this.appCounts,
     required this.dailyCounts,
     required this.hourlyCounts,
@@ -99,6 +103,7 @@ class StatsProvider with ChangeNotifier {
           otpCountToday: (result['otpCountToday'] as num?)?.toInt() ?? 0,
           priorityCountToday: (result['priorityCountToday'] as num?)?.toInt() ?? 0,
           quietHoursSkippedToday: (result['quietHoursSkippedToday'] as num?)?.toInt() ?? 0,
+          recalledTodayCount: (result['recalledTodayCount'] as num?)?.toInt() ?? 0,
           appCounts: appCountsMap,
           dailyCounts: dailyList,
           hourlyCounts: hourlyMap,
