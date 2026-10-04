@@ -49,7 +49,7 @@ void main() {
     });
 
     test('ids that failed Google Play verification stay out', () {
-      // Checked with datasetfires on 2026-10-04: wrong ids, a discontinued app,
+      // Checked against Google Play on 2026-10-04: wrong ids, a discontinued app,
       // and one that could not be verified from Turkey.
       for (final rejected in const [
         'com.trendyol.android',

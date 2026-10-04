@@ -1,20 +1,17 @@
-# Notification Keeper — Birleştirme Değişiklik Listesi (Faz 1)
+# Notification Keeper — Değişiklik Günlüğü
 
-Bu paket, tam `app-release` (com.example.notification_keeper.app) proje
-klasörünüzün **üzerine** kopyalanacak dosyaları içerir. Kendi projenizdeki
-`ios/`, `build/`, `.dart_tool/`, gradle wrapper dosyaları vb. hiçbir şeye
-dokunmuyor — sadece aşağıdaki dosyaları değiştirin/ekleyin.
+Geliştirme fazlarına göre değişiklik kaydı; en eski faz en üstte.
 
-## Nasıl uygulanır
-1. Bu zip'i açın.
-2. İçindeki `android/`, `assets/`, `lib/`, `pubspec.yaml` klasör/dosyalarını
-   kendi tam `app-release` proje klasörünüzün üzerine kopyalayın (aynı
-   isimdeki dosyaların üzerine yazacak).
-3. Terminalde proje klasöründe: `flutter pub get`
-4. `flutter analyze` çalıştırıp olası hataları kontrol edin (ben derleme
-   yapamadığım için küçük düzeltmeler gerekebilir — bir hata görürseniz
-   bana yapıştırın, hemen düzeltelim).
-5. `flutter build apk` ile APK'yı üretin.
+# Faz 1 — Birleştirme
+
+`base.apk` (com.example.fluter) prototipindeki özellikler ana uygulamaya
+(com.example.notification_keeper.app) taşındı. `ios/`, `build/`,
+`.dart_tool/` ve gradle wrapper dosyalarına dokunulmadı.
+
+## Derleme
+1. `flutter pub get`
+2. `flutter analyze`
+3. `flutter build apk`
 
 ## Değiştirilen / Eklenen Dosyalar
 
@@ -62,8 +59,8 @@ dokunmuyor — sadece aşağıdaki dosyaları değiştirin/ekleyin.
 - CSV formatında dışa aktarma + paylaşma sayfasına bağlı
 
 ## Bilinen sınırlamalar / dikkat edilmesi gerekenler
-- Bu kodu derleyip test edemedim (bu ortamda Flutter/Android SDK yok). Küçük
-  derleme hataları çıkabilir; çıkarsa buraya yapıştırın, birlikte düzeltelim.
+- Bu faz derleyici ve cihaz doğrulaması olmadan tamamlandı; derleme ve cihaz
+  testleri Faz 11'de yapıldı.
 - `NotificationEntity` şeması değiştiği için mevcut kullanıcılarda uygulama
   güncellendiğinde Room migration (v3→v4) otomatik çalışacak, veri kaybı
   olmamalı — yine de test cihazında güncelleme senaryosunu bir kez deneyin.
@@ -74,8 +71,7 @@ dokunmuyor — sadece aşağıdaki dosyaları değiştirin/ekleyin.
 
 # Faz 2 — Yeni Özellikler (İlk Paket)
 
-Bu bölüm Faz 1'in üzerine ekler. Aynı şekilde dosyaları proje klasörünüzün
-üzerine kopyalayın; `flutter pub get` gerekmiyor (yeni paket eklenmedi).
+Bu bölüm Faz 1'in üzerine ekler; yeni paket bağımlılığı yok.
 
 ## Eklenen / değişen dosyalar (Faz 2)
 | Dosya | Değişiklik |
@@ -116,13 +112,12 @@ Bu bölüm Faz 1'in üzerine ekler. Aynı şekilde dosyaları proje klasörünü
 - `postInstantAlert()` bildirim küçük ikonu olarak `R.mipmap.ic_launcher`
   kullanıyor (tam renkli). Android 5+ bunu otomatik olarak durum çubuğunda
   siluete çeviriyor, ama ileride gerçek bir monokrom bildirim ikonu
-  eklemek isterseniz `res/drawable/ic_notification.xml` gibi ayrı bir kaynak
+  için `res/drawable/ic_notification.xml` gibi ayrı bir kaynak
   daha temiz olur.
 - Susturma (`snoozeApp`) hiç `app_preferences` satırı olmayan bir uygulamada
   çağrılırsa, o uygulamayı otomatik olarak `isMonitored = true` ile
   oluşturuyor — yani bir uygulamayı hiç açıp izlemeye almadan susturursanız,
-  susturma bitince otomatik olarak izlenmeye başlar. Bu bilinçli bir tercih;
-  farklı davranış isterseniz söyleyin.
+  susturma bitince otomatik olarak izlenmeye başlar. Bu bilinçli bir tercih.
 
 ---
 
@@ -190,7 +185,7 @@ Bu bölüm Faz 1'in üzerine ekler. Aynı şekilde dosyaları proje klasörünü
 ## Faz 4'e özel dikkat noktaları
 - `previewImage` olarak uygulamanın normal ikonunu kullandım (ayrı bir widget
   önizleme görseli tasarlamadım) — widget ekleme ekranında bu ikon görünür,
-  kozmetik bir detay, isterseniz sonra özelleştirilebilir.
+  kozmetik bir detay, ileride özelleştirilebilir.
 - Widget metni İngilizce sabit ("No notifications yet" vb.) — çoklu dil
   desteği eklenene kadar böyle kalacak.
 
@@ -275,10 +270,9 @@ sınıfını sistematik olarak taradım ve düzelttim:
    metinleri kullanılamadığı için bu listeleri `build()` sırasında
    dinamik olarak oluşturacak şekilde yeniden yapılandırdım.
 
-Yine de: bu kodu gerçek bir Flutter derleyicisinden geçiremedim. Yukarıdaki
-taramalar (parantez dengesi, `const`+çeviri çakışması, eksik import/tanım)
-elle yazdığım script'lerle yapıldı — `flutter analyze` çalıştırıp bir hata
-görürseniz doğrudan buraya yapıştırın.
+Bu faz derleyiciden geçirilmeden tamamlandı; yukarıdaki taramalar (parantez
+dengesi, `const`+çeviri çakışması, eksik import/tanım) betiklerle yapıldı.
+Derleme doğrulaması Faz 11'de yapıldı.
 
 ## Bilinen sınırlamalar (Faz 6)
 - Ana ekran widget'ının dili **cihazın sistem diline** göre belirlenir,
@@ -345,12 +339,12 @@ cihaz/emülatör olmadan kendi geçici klasörlerini verebiliyor).
 ## Bilinen kapsam dışı bırakılanlar
 - Native (Kotlin) taraf için otomatik test yazmadım — Room/WorkManager gibi
   bileşenler gerçek bir Android cihaz/emülatör veya Robolectric gibi bir
-  test çatısı gerektiriyor, bu ortamda çalıştıramıyorum. `NotificationDao`,
+  test çatısı gerektiriyor. `NotificationDao`,
   `NotificationListener` gibi sınıfların mantığını elle (kod okuyarak)
   doğruladım ama otomatik testleri yok.
 - Widget testleri sadece `RecentCodesWidget` için yazıldı (en yoğun yeni
-  mantığa sahip olan) — diğer ekranlar için benzer testler isterseniz
-  aynı deseni tekrarlayabilirim.
+  mantığa sahip olan) — diğer ekranlar için aynı desen
+  tekrarlanabilir.
 
 ---
 
@@ -405,13 +399,13 @@ geçmediğini söyler.
 | `presentation/screens/permission_screen.dart` | "I have enabled it" butonu artık sonucu bekliyor ve başarısızsa açık mesaj gösteriyor |
 | `lib/l10n/app_en.arb`, `app_tr.arb` | Yeni geri bildirim mesajları |
 
-## Dürüst olmam gereken nokta
+## Kesinlik notu
 Biyometrik hatalar (1) kesin ve doğrulanmış — bunlar gerçek, bilinen
 Android/`local_auth` gereksinimleri, yanlış olma ihtimalleri çok düşük.
 İzin ekranı düzeltmesi (2) ise **kesin kanıtlanmış bir kök neden** değil,
 kod okumasıyla bulabildiğim en olası açıklama + "her durumda hiç sessiz
-kalmayacak" bir çözüm. Test edip yine takılırsa (artık bir hata mesajıyla
-birlikte), o mesajı buraya yapıştırın — kesin nedeni birlikte buluruz.
+kalmayacak" bir çözüm. Sorun sürerse artık gösterilen hata mesajı, kesin nedeni bulmak için
+başlangıç noktası olur.
 
 ---
 
@@ -442,8 +436,8 @@ hazır bir yardımcı sağlıyor.
 
 ## Bilinen sınırlama
 Bu, bu tür "izin kontrolü yanlış negatif veriyor" hatalarının en yaygın ve
-belgelenmiş nedeni ve düzeltmesi. Yine de gerçek bir derleyici/cihazdan
-geçirilmedi — test edip başka bir şey görürseniz mesajı buraya yapıştırın.
+belgelenmiş nedeni ve düzeltmesi. Derleme ve cihaz doğrulaması
+Faz 11'de yapıldı.
 
 
 
@@ -460,9 +454,8 @@ Bu faz iki iş yapıyor: (1) README'de yazan **her** iddiayı koda karşı tek t
 doğruladım ve tutmayanları düzelttim, (2) projenin çizgisine oturan iki yeni
 özellik ekledim.
 
-> **Not:** Bu ortamda Flutter/Android SDK kurulu olmadığı için `flutter test`
-> ve `flutter analyze` yine çalıştırılamadı. Doğrulama statik okuma ile
-> yapıldı; testler yazıldı ama koşturulmadı.
+> **Not:** Bu faz yazılırken `flutter test` ve `flutter analyze` çalıştırılmadı;
+> doğrulama statik okuma ile yapıldı. Araç zinciriyle doğrulama Faz 11'de yapıldı.
 
 ## A. README'de yazıp da yapmayan davranışlar (düzeltildi)
 
