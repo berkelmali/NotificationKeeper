@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../data/repositories/notification_repository.dart';
 import '../../domain/models/notification_model.dart';
@@ -14,6 +15,19 @@ class NotificationProvider extends ChangeNotifier {
 
   // New feature: date-range filtering (complements text search)
   DateTimeRange? _dateRange;
+
+  /// How long a deleted notification can still be brought back with Undo.
+  static const Duration undoWindow = Duration(seconds: 4);
+
+  // Real undo. The snackbar's "Undo" used to call fetchNotifications() after
+  // the row had already been deleted natively, so it could never restore
+  // anything. Deletes now wait out the undo window before they reach the
+  // database, and Undo simply cancels them.
+  final Map<int, _PendingDelete> _pendingDeletes = {};
+
+  // Live updates arrive in bursts (a chat app can re-post several times a
+  // second); they are coalesced into one quiet reload.
+  Timer? _refreshDebounce;
 
   List<NotificationModel> get notifications => _filteredNotifications;
   List<NotificationModel> get allNotifications => _allNotifications;
@@ -47,9 +61,14 @@ class NotificationProvider extends ChangeNotifier {
     return sorted;
   }
 
-  Future<void> fetchNotifications() async {
-    _isLoading = true;
-    notifyListeners();
+  /// Reloads the archive. [silent] skips the loading state, for background
+  /// refreshes (live updates, returning to the app) where flashing the
+  /// skeleton over a list the user is reading would be worse than a short wait.
+  Future<void> fetchNotifications({bool silent = false}) async {
+    if (!silent) {
+      _isLoading = true;
+      notifyListeners();
+    }
     try {
       // New feature B: shred anything that expired since the last worker tick
       // *before* reading, so an out-of-date code is never drawn on screen even
@@ -60,7 +79,10 @@ class NotificationProvider extends ChangeNotifier {
       } catch (e) {
         debugPrint("Shred pass skipped: $e");
       }
-      _allNotifications = await _repository.getAllNotifications();
+      // Rows the user just deleted stay hidden while their undo window runs.
+      _allNotifications = (await _repository.getAllNotifications())
+          .where((n) => !_pendingDeletes.containsKey(n.id))
+          .toList();
       _applyFilters();
     } catch (e) {
       debugPrint("Error fetching notifications: $e");
@@ -93,6 +115,69 @@ class NotificationProvider extends ChangeNotifier {
     _selectedTag = tag;
     _applyFilters();
     notifyListeners();
+  }
+
+  /// Asks for a quiet reload soon; repeated calls within the window merge.
+  void scheduleRefresh() {
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(const Duration(milliseconds: 350), () {
+      fetchNotifications(silent: true);
+    });
+  }
+
+  /// Removes a notification from the list now and from the database after
+  /// [undoWindow], unless [undoDelete] is called first.
+  void deleteWithUndo(int id) {
+    final index = _allNotifications.indexWhere((n) => n.id == id);
+    if (index == -1) return;
+    final item = _allNotifications.removeAt(index);
+    _pendingDeletes.remove(id)?.timer.cancel();
+    _pendingDeletes[id] = _PendingDelete(
+      item: item,
+      index: index,
+      timer: Timer(undoWindow, () => _commitDelete(id)),
+    );
+    _applyFilters();
+    notifyListeners();
+  }
+
+  /// Puts a deleted notification back where it was. False if its undo window
+  /// has already closed.
+  bool undoDelete(int id) {
+    final pending = _pendingDeletes.remove(id);
+    if (pending == null) return false;
+    pending.timer.cancel();
+    _allNotifications.insert(pending.index.clamp(0, _allNotifications.length), pending.item);
+    _applyFilters();
+    notifyListeners();
+    return true;
+  }
+
+  /// Commits every pending delete now. Called when the app goes to the
+  /// background, so a delete is not lost if Android kills the process before
+  /// the undo window closes.
+  Future<void> flushPendingDeletes() async {
+    for (final id in _pendingDeletes.keys.toList()) {
+      await _commitDelete(id);
+    }
+  }
+
+  bool isPendingDelete(int id) => _pendingDeletes.containsKey(id);
+
+  Future<void> _commitDelete(int id) async {
+    final pending = _pendingDeletes.remove(id);
+    if (pending == null) return;
+    pending.timer.cancel();
+    await _repository.deleteNotification(id);
+  }
+
+  @override
+  void dispose() {
+    _refreshDebounce?.cancel();
+    for (final pending in _pendingDeletes.values) {
+      pending.timer.cancel();
+    }
+    super.dispose();
   }
 
   Future<void> deleteNotification(int id) async {
@@ -226,4 +311,12 @@ class NotificationProvider extends ChangeNotifier {
 
     _filteredNotifications = filtered;
   }
+}
+
+class _PendingDelete {
+  final NotificationModel item;
+  final int index;
+  final Timer timer;
+
+  _PendingDelete({required this.item, required this.index, required this.timer});
 }

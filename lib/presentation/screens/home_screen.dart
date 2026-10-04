@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'dashboard_screen.dart';
 import 'archive_screen.dart';
 import 'apps_screen.dart';
@@ -6,6 +8,9 @@ import 'settings_screen.dart';
 import 'permission_screen.dart';
 import '../widgets/custom_bottom_nav.dart';
 import '../../data/repositories/notification_repository.dart';
+import '../../data/services/notification_events.dart';
+import '../providers/notification_provider.dart';
+import '../providers/stats_provider.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -19,6 +24,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final NotificationRepository _repo = NotificationRepository();
   bool _hasPermission = false;
   bool _isLoading = true;
+  StreamSubscription<String>? _liveUpdates;
+  Timer? _refreshTimer;
 
   final List<Widget> _screens = const [
     DashboardScreen(),
@@ -37,6 +44,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _liveUpdates?.cancel();
+    _refreshTimer?.cancel();
     super.dispose();
   }
 
@@ -44,11 +53,40 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _checkPermission();
+      // Back from WhatsApp & co.: what arrived meanwhile should already be
+      // there. This used to need a cold start.
+      _refreshData();
+    } else if (state == AppLifecycleState.paused) {
+      // Commit deletes still inside their undo window, in case Android kills
+      // the process while the app is in the background.
+      context.read<NotificationProvider>().flushPendingDeletes();
     }
   }
   
+  /// Quiet reload of everything the archive and dashboard show. Bursts (a chat
+  /// app re-posting several times a second) collapse into one reload.
+  void _refreshData() {
+    if (!_hasPermission || !mounted) return;
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      context.read<NotificationProvider>().fetchNotifications(silent: true);
+      context.read<StatsProvider>().fetchStats();
+    });
+  }
+
+  /// Live updates while the app is open. Only started once access is granted,
+  /// so there is nothing to listen to before that.
+  void _startLiveUpdates() {
+    _liveUpdates ??= NotificationEvents.stream.listen(
+      (_) => _refreshData(),
+      onError: (Object e) => debugPrint('Live updates unavailable: $e'),
+    );
+  }
+
   Future<bool> _checkPermission() async {
     final enabled = await _repo.isServiceEnabled();
+    if (enabled) _startLiveUpdates();
     if (mounted) {
       setState(() {
         _hasPermission = enabled;

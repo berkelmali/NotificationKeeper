@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app's dark background (AppColors.backgroundDark). The launch screen
+         and the window behind Flutter use it so a cold start does not flash
+         white before the dark UI draws - the in-app theme defaults to dark
+         whatever the system setting is. -->
+    <color name="app_background">#0F172A</color>
+</resources>

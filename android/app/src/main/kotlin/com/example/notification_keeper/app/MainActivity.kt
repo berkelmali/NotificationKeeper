@@ -7,6 +7,7 @@ import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,6 +18,7 @@ import com.example.notification_keeper.data.database.AppDatabase
 import com.example.notification_keeper.data.entity.AppPreferenceEntity
 import com.example.notification_keeper.data.entity.NotificationEntity
 import com.example.notification_keeper.service.NotificationImageStore
+import com.example.notification_keeper.service.NotificationEvents
 import com.example.notification_keeper.service.NotificationListener
 import com.example.notification_keeper.worker.CodeShredWorker
 import com.example.notification_keeper.worker.CodeShredder
@@ -79,6 +81,10 @@ class MainActivity: FlutterFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         
+        // Live updates: the listener service pushes "the archive changed" here.
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, NotificationEvents.CHANNEL)
+            .setStreamHandler(NotificationEvents.streamHandler)
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "getAllNotifications" -> {

@@ -147,6 +147,7 @@ class NotificationListener : NotificationListenerService() {
                 // be able to cost us the message. Reading a photo means a binder call
                 // into the sender app's provider, and that can be slow or stall.
                 val rowId = database.notificationDao().insert(entity)
+                NotificationEvents.emit(NotificationEvents.POSTED)
                 Log.d("NotificationListener", "Saved notification from $packageName (otp=$isOtp, priority=$isPriorityFlagged)")
 
                 // Photo vault: keep a private copy of any picture the notification
@@ -158,6 +159,7 @@ class NotificationListener : NotificationListenerService() {
                 if (photoCaptureEnabled()) {
                     imageStore.capture(notification, lastMessage)?.let { path ->
                         database.notificationDao().updateImagePath(rowId, path)
+                        NotificationEvents.emit(NotificationEvents.UPDATED)
                     }
                 }
 
@@ -239,6 +241,7 @@ class NotificationListener : NotificationListenerService() {
                 if (!looksLikeConversation) return@launch
 
                 database.notificationDao().markRecalled(stored.id, withdrawnAt)
+                NotificationEvents.emit(NotificationEvents.RECALLED)
                 Log.d("NotificationListener", "Recall detected for ${sbn.packageName} (id=${stored.id})")
 
                 com.example.notification_keeper.widget.NotificationWidgetProvider
