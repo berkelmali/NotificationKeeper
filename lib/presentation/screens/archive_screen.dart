@@ -235,7 +235,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                         decoration: BoxDecoration(
                           color: isActive
                               ? AppColors.primaryStart.withValues(alpha: 0.15)
-                              : (isDark ? AppColors.surfaceLight : AppColors.cardLight),
+                              : (isDark ? AppColors.cardDark : AppColors.cardLight),
                           borderRadius: BorderRadius.circular(12),
                           border: isActive
                               ? Border.all(color: AppColors.primaryStart)
@@ -299,7 +299,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                     margin: const EdgeInsets.symmetric(horizontal: 16),
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     decoration: BoxDecoration(
-                      color: isDark ? AppColors.surfaceLight : Colors.white,
+                      color: isDark ? AppColors.cardDark : Colors.white,
                       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
                       border: Border.all(
                         color: isDark ? AppColors.cardBorder : AppColors.cardBorderLight,
@@ -432,6 +432,17 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                       // New feature A: Recall Radar. Only offered once something
                       // has actually been withdrawn, so it doesn't sit there as a
                       // permanently empty filter.
+                      // Photo vault: every kept picture in one place, offered as
+                      // soon as the archive holds at least one.
+                      if (provider.allNotifications.any((n) => n.hasImage)) ...[
+                        _FilterChip(
+                          label: '📷 ${l10n.filterPhotos}',
+                          isSelected: provider.filterMode == 'photos',
+                          color: AppColors.accent,
+                          onTap: () => provider.setFilterMode('photos'),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
                       if (provider.allNotifications.any((n) => n.isRecalled)) ...[
                         _FilterChip(
                           label: '↩️ ${l10n.filterRecalled}',
@@ -623,7 +634,7 @@ class _FilterChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? activeColor.withValues(alpha: 0.2)
-              : (isDark ? AppColors.surfaceLight : AppColors.cardLight),
+              : (isDark ? AppColors.cardDark : AppColors.cardLight),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected

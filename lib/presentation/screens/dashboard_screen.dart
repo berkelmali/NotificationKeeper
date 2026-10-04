@@ -336,7 +336,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                     child: LinearProgressIndicator(
                                       value: ratio,
                                       backgroundColor: isDark
-                                          ? AppColors.surfaceLight
+                                          ? AppColors.cardDark
                                           : AppColors.cardLight,
                                       valueColor: AlwaysStoppedAnimation(
                                         AppColors.colorForPackage(entry.key),
@@ -527,7 +527,7 @@ class _WeeklyChart extends StatelessWidget {
         barTouchData: BarTouchData(
           enabled: true,
           touchTooltipData: BarTouchTooltipData(
-            getTooltipColor: (_) => isDark ? AppColors.surfaceLight : Colors.white,
+            getTooltipColor: (_) => isDark ? AppColors.cardDark : Colors.white,
             tooltipRoundedRadius: 8,
             getTooltipItem: (group, groupIndex, rod, rodIndex) {
               return BarTooltipItem(

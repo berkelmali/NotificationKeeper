@@ -1393,6 +1393,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Code shredded'**
   String get codeShreddedLabel;
+
+  /// No description provided for @filterPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos'**
+  String get filterPhotos;
+
+  /// No description provided for @sectionPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos'**
+  String get sectionPhotos;
+
+  /// No description provided for @capturePhotosTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep photos from messages'**
+  String get capturePhotosTitle;
+
+  /// No description provided for @capturePhotosSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A private copy stays here even if the sender deletes the message'**
+  String get capturePhotosSubtitle;
+
+  /// No description provided for @photoStorageUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} photos · {size}'**
+  String photoStorageUsage(int count, String size);
+
+  /// No description provided for @photoPrivacyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved copies are stored privately on this phone, resized, with location and other hidden data removed.'**
+  String get photoPrivacyNote;
+
+  /// No description provided for @deleteAllPhotosTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all photos'**
+  String get deleteAllPhotosTitle;
+
+  /// No description provided for @deleteAllPhotosBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Every stored photo will be removed. The notifications themselves stay in the archive.'**
+  String get deleteAllPhotosBody;
+
+  /// No description provided for @photosDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos deleted'**
+  String get photosDeleted;
+
+  /// No description provided for @photoKeptAfterRecall.
+  ///
+  /// In en, this message translates to:
+  /// **'The sender deleted this message. The photo is still here.'**
+  String get photoKeptAfterRecall;
+
+  /// No description provided for @sharePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Share photo'**
+  String get sharePhoto;
+
+  /// No description provided for @closeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get closeAction;
 }
 
 class _AppLocalizationsDelegate

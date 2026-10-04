@@ -732,4 +732,46 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get codeShreddedLabel => 'Kod imha edildi';
+
+  @override
+  String get filterPhotos => 'Fotoğraflar';
+
+  @override
+  String get sectionPhotos => 'Fotoğraflar';
+
+  @override
+  String get capturePhotosTitle => 'Mesajlardaki fotoğrafları sakla';
+
+  @override
+  String get capturePhotosSubtitle =>
+      'Gönderen mesajı silse bile özel bir kopya burada kalır';
+
+  @override
+  String photoStorageUsage(int count, String size) {
+    return '$count fotoğraf · $size';
+  }
+
+  @override
+  String get photoPrivacyNote =>
+      'Kopyalar bu telefonda gizli olarak, küçültülerek ve konum gibi gizli bilgileri temizlenerek saklanır.';
+
+  @override
+  String get deleteAllPhotosTitle => 'Tüm fotoğrafları sil';
+
+  @override
+  String get deleteAllPhotosBody =>
+      'Saklanan tüm fotoğraflar silinecek. Bildirimlerin kendisi arşivde kalır.';
+
+  @override
+  String get photosDeleted => 'Fotoğraflar silindi';
+
+  @override
+  String get photoKeptAfterRecall =>
+      'Gönderen bu mesajı sildi. Fotoğraf hâlâ burada.';
+
+  @override
+  String get sharePhoto => 'Fotoğrafı paylaş';
+
+  @override
+  String get closeAction => 'Kapat';
 }

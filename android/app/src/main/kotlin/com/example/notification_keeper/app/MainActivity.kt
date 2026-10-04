@@ -15,6 +15,8 @@ import kotlinx.coroutines.withContext
 import com.example.notification_keeper.data.database.AppDatabase
 import com.example.notification_keeper.data.entity.AppPreferenceEntity
 import com.example.notification_keeper.data.entity.NotificationEntity
+import com.example.notification_keeper.service.NotificationImageStore
+import com.example.notification_keeper.service.NotificationListener
 import com.example.notification_keeper.worker.CodeShredWorker
 import com.example.notification_keeper.worker.CodeShredder
 import com.example.notification_keeper.worker.RetentionWorker
@@ -561,6 +563,38 @@ class MainActivity: FlutterFragmentActivity() {
                 "getInstantAlertsEnabled" -> {
                     val prefs = getSharedPreferences("notification_keeper_prefs", MODE_PRIVATE)
                     result.success(prefs.getBoolean("instant_alerts_enabled", true))
+                }
+                // --- Photo vault ---
+                "setCapturePhotos" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: true
+                    getSharedPreferences("notification_keeper_prefs", MODE_PRIVATE).edit()
+                        .putBoolean(NotificationListener.PREF_CAPTURE_PHOTOS, enabled).apply()
+                    result.success(true)
+                }
+                "getCapturePhotos" -> {
+                    result.success(
+                        getSharedPreferences("notification_keeper_prefs", MODE_PRIVATE)
+                            .getBoolean(NotificationListener.PREF_CAPTURE_PHOTOS, true)
+                    )
+                }
+                "getPhotoStorageStats" -> {
+                    scope.launch(Dispatchers.IO) {
+                        val (count, bytes) = NotificationImageStore(applicationContext).stats()
+                        withContext(Dispatchers.Main) {
+                            result.success(mapOf("count" to count, "bytes" to bytes))
+                        }
+                    }
+                }
+                "deleteAllPhotos" -> {
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            NotificationImageStore(applicationContext).deleteAll()
+                            AppDatabase.getDatabase(applicationContext).notificationDao().clearAllImagePaths()
+                            withContext(Dispatchers.Main) { result.success(true) }
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) { result.error("DB_ERROR", e.message, null) }
+                        }
+                    }
                 }
                 // --- New feature B: Code Shredder ---
                 "setOtpShredMinutes" -> {

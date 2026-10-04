@@ -9,7 +9,7 @@ class NotificationProvider extends ChangeNotifier {
   bool _isLoading = false;
   String _searchQuery = '';
   String? _selectedApp;
-  String _filterMode = 'all'; // all, starred, unread, tagged, recalled
+  String _filterMode = 'all'; // all, starred, unread, tagged, recalled, photos
   String? _selectedTag;
 
   // New feature: date-range filtering (complements text search)
@@ -190,6 +190,9 @@ class NotificationProvider extends ChangeNotifier {
     } else if (_filterMode == 'recalled') {
       // New feature A: only messages their sender tried to take back
       filtered = filtered.where((n) => n.isRecalled).toList();
+    } else if (_filterMode == 'photos') {
+      // Photo vault: only notifications that carried a picture
+      filtered = filtered.where((n) => n.hasImage).toList();
     }
 
     // Filter by specific tag

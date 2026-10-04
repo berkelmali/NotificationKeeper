@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
+import '../providers/notification_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
@@ -135,7 +136,7 @@ class SettingsScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: settings.biometricLockEnabled
                             ? AppColors.primaryStart.withValues(alpha: 0.15)
-                            : (isDark ? AppColors.surfaceLight : AppColors.cardLight),
+                            : (isDark ? AppColors.cardDark : AppColors.cardLight),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
@@ -175,7 +176,7 @@ class SettingsScreen extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: isOn
                                 ? AppColors.error.withValues(alpha: 0.15)
-                                : (isDark ? AppColors.surfaceLight : AppColors.cardLight),
+                                : (isDark ? AppColors.cardDark : AppColors.cardLight),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
@@ -226,7 +227,7 @@ class SettingsScreen extends StatelessWidget {
                             color: settings.quietHoursEnabled
                                 ? AppColors.warning.withValues(alpha: 0.15)
                                 : (isDark
-                                    ? AppColors.surfaceLight
+                                    ? AppColors.cardDark
                                     : AppColors.cardLight),
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -455,6 +456,11 @@ class SettingsScreen extends StatelessWidget {
                 );
               },
             ),
+            const SizedBox(height: 24),
+
+            // ─── Photo vault ───
+            _SectionHeader(title: l10n.sectionPhotos),
+            _PhotoVaultCard(repo: repo),
             const SizedBox(height: 24),
 
             // ─── Data Management ───
@@ -1255,6 +1261,127 @@ class _FeatureBadge extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Photo vault settings: the on/off switch, how much the kept photos weigh,
+/// and a way to delete them all without touching the notifications.
+class _PhotoVaultCard extends StatefulWidget {
+  final NotificationRepository repo;
+
+  const _PhotoVaultCard({required this.repo});
+
+  @override
+  State<_PhotoVaultCard> createState() => _PhotoVaultCardState();
+}
+
+class _PhotoVaultCardState extends State<_PhotoVaultCard> {
+  PhotoStorageStats? _stats;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    final stats = await widget.repo.getPhotoStorageStats();
+    if (mounted) setState(() => _stats = stats);
+  }
+
+  Future<void> _confirmDeleteAll(AppLocalizations l10n) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.deleteAllPhotosTitle),
+        content: Text(l10n.deleteAllPhotosBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancelAction),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: Text(l10n.deleteAction),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    await widget.repo.deleteAllPhotos();
+    if (!mounted) return;
+    // The archive still holds the old image paths in memory; reload it.
+    await Provider.of<NotificationProvider>(context, listen: false).fetchNotifications();
+    await _loadStats();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.photosDeleted)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final stats = _stats;
+
+    return Consumer<SettingsProvider>(
+      builder: (context, settings, _) {
+        return GlassCard(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            children: [
+              SwitchListTile(
+                secondary: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: settings.capturePhotos
+                        ? AppColors.accent.withValues(alpha: 0.15)
+                        : (isDark ? AppColors.cardDark : AppColors.cardLight),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.photo_library_rounded,
+                    color: settings.capturePhotos ? AppColors.accent : AppColors.textTertiary,
+                    size: 20,
+                  ),
+                ),
+                title: Text(l10n.capturePhotosTitle),
+                subtitle: Text(
+                  l10n.capturePhotosSubtitle,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                value: settings.capturePhotos,
+                onChanged: (value) {
+                  settings.setCapturePhotos(value);
+                  widget.repo.setCapturePhotos(value);
+                },
+              ),
+              if (stats != null && stats.count > 0)
+                _SettingsTile(
+                  icon: Icons.delete_sweep_rounded,
+                  iconColor: AppColors.error,
+                  title: l10n.deleteAllPhotosTitle,
+                  subtitle: l10n.photoStorageUsage(stats.count, stats.formattedSize),
+                  onTap: () => _confirmDeleteAll(l10n),
+                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                child: Text(
+                  l10n.photoPrivacyNote,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textTertiary,
+                        height: 1.5,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

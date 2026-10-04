@@ -309,5 +309,19 @@
   "@codeShredDone": {
     "placeholders": { "count": { "type": "int" } }
   },
-  "codeShreddedLabel": "Code shredded"
+  "codeShreddedLabel": "Code shredded",
+
+  "filterPhotos": "Photos",
+  "sectionPhotos": "Photos",
+  "capturePhotosTitle": "Keep photos from messages",
+  "capturePhotosSubtitle": "A private copy stays here even if the sender deletes the message",
+  "photoStorageUsage": "{count} photos · {size}",
+  "@photoStorageUsage": {"placeholders": {"count": {"type": "int"}, "size": {"type": "String"}}},
+  "photoPrivacyNote": "Saved copies are stored privately on this phone, resized, with location and other hidden data removed.",
+  "deleteAllPhotosTitle": "Delete all photos",
+  "deleteAllPhotosBody": "Every stored photo will be removed. The notifications themselves stay in the archive.",
+  "photosDeleted": "Photos deleted",
+  "photoKeptAfterRecall": "The sender deleted this message. The photo is still here.",
+  "sharePhoto": "Share photo",
+  "closeAction": "Close"
 }

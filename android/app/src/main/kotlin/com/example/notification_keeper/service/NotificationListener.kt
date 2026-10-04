@@ -6,7 +6,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Person
 import android.content.Intent
-import android.graphics.Bitmap
 import android.os.Build
 import android.os.Bundle
 import android.service.notification.NotificationListenerService
@@ -20,15 +19,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import android.util.Log
-import java.io.File
-import java.io.FileOutputStream
 import java.util.Calendar
-import java.util.UUID
 import java.util.regex.Pattern
 
 class NotificationListener : NotificationListenerService() {
     private val serviceScope = CoroutineScope(Dispatchers.IO)
     private lateinit var database: AppDatabase
+    private val imageStore by lazy { NotificationImageStore(applicationContext) }
 
     // Merged from base.apk: OTP Regex. Matches context words near a 4-to-8 digit number.
     private val otpRegex = Regex(
@@ -90,17 +87,14 @@ class NotificationListener : NotificationListenerService() {
                 val (title, text) = extractTitleAndText(notification)
 
                 val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
-                val timestamp = sbn.postTime
+                val lastMessage = lastMessageBundle(notification)
 
-                // New feature: save any attached BigPictureStyle image (e.g. a photo shared
-                // in a messaging app) so it can be previewed later in the archive. We
-                // deliberately don't save the small "large icon" (usually just a contact
-                // avatar) - only genuine picture attachments, to keep this meaningful.
-                var imagePath: String? = null
-                val picture = extras.get(Notification.EXTRA_PICTURE) as? Bitmap
-                if (picture != null) {
-                    imagePath = saveNotificationImage(picture)
-                }
+                // A conversation notification is re-posted every time anything in the
+                // chat changes, carrying the same newest message each time. Stamping the
+                // row with the message's own time (rather than the re-post time) makes
+                // those re-posts exact duplicates that the check below can recognise.
+                val timestamp = lastMessage?.getLong(MESSAGE_KEY_TIME)?.takeIf { it > 0 }
+                    ?: sbn.postTime
 
                 // Validate essential data
                 if (title.isNullOrBlank() && text.isNullOrBlank()) return@launch
@@ -110,6 +104,7 @@ class NotificationListener : NotificationListenerService() {
                     packageName, title, text, timestamp - 2000
                 )
                 if (duplicate != null) return@launch
+
 
                 // 4. Merged from base.apk: OTP extraction + Keyword Radar
                 val combinedContent = "${title.orEmpty()} ${text.orEmpty()}"
@@ -145,13 +140,26 @@ class NotificationListener : NotificationListenerService() {
                         ?: extras.getString(Notification.EXTRA_SELF_DISPLAY_NAME),
                     isOtp = isOtp,
                     extractedCode = extractedCode,
-                    isPriorityFlagged = isPriorityFlagged,
-                    imagePath = imagePath
+                    isPriorityFlagged = isPriorityFlagged
                 )
 
-                // 6. Store
-                database.notificationDao().insert(entity)
+                // 6. Store. The text goes in first, on its own: a picture must never
+                // be able to cost us the message. Reading a photo means a binder call
+                // into the sender app's provider, and that can be slow or stall.
+                val rowId = database.notificationDao().insert(entity)
                 Log.d("NotificationListener", "Saved notification from $packageName (otp=$isOtp, priority=$isPriorityFlagged)")
+
+                // Photo vault: keep a private copy of any picture the notification
+                // carries, including WhatsApp/Telegram photo messages, so it survives
+                // the sender deleting it. Runs right after the insert - not later -
+                // because Android revokes our read access to a message photo the
+                // moment the notification is withdrawn. After the duplicate check, so
+                // re-posts no longer leave an orphaned file behind each time.
+                if (photoCaptureEnabled()) {
+                    imageStore.capture(notification, lastMessage)?.let { path ->
+                        database.notificationDao().updateImagePath(rowId, path)
+                    }
+                }
 
                 // Counted here rather than at the top of the coroutine so the
                 // dashboard's "captured quietly" number reflects what was
@@ -359,28 +367,10 @@ class NotificationListener : NotificationListenerService() {
             .apply()
     }
 
-    /**
-     * New feature: saves an attached BigPictureStyle image to this app's private
-     * internal storage (not visible to other apps or the user's gallery) and
-     * returns the absolute file path, or null if saving failed. A capped folder
-     * size isn't implemented here - it piggybacks on the existing Data Hygiene /
-     * RetentionWorker cleanup, which should also be extended to delete the image
-     * file for notifications it removes (see CHANGELOG for this known gap).
-     */
-    private fun saveNotificationImage(bitmap: Bitmap): String? {
-        return try {
-            val dir = File(applicationContext.filesDir, "notification_images")
-            if (!dir.exists()) dir.mkdirs()
-            val file = File(dir, "${UUID.randomUUID()}.jpg")
-            FileOutputStream(file).use { out ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 80, out)
-            }
-            file.absolutePath
-        } catch (e: Exception) {
-            Log.e("NotificationListener", "Failed to save notification image", e)
-            null
-        }
-    }
+    /** Photo vault switch, Settings > Photos. On by default. */
+    private fun photoCaptureEnabled(): Boolean =
+        applicationContext.getSharedPreferences("notification_keeper_prefs", MODE_PRIVATE)
+            .getBoolean(PREF_CAPTURE_PHOTOS, true)
 
     private fun createAlertChannelIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -492,6 +482,12 @@ class NotificationListener : NotificationListenerService() {
 
     companion object {
         private const val ALERT_CHANNEL_ID = "instant_alerts"
+
+        /** SharedPreferences key for the photo vault switch (read by MainActivity too). */
+        const val PREF_CAPTURE_PHOTOS = "capture_photos_enabled"
+
+        // Notification.MessagingStyle.Message bundle key for the message timestamp.
+        private const val MESSAGE_KEY_TIME = "time"
 
         // NotificationListenerService.REASON_APP_CANCEL / _ALL. Spelled out as
         // literals so the Recall Radar compiles and links on the API 21+ range

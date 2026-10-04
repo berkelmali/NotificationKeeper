@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../domain/models/notification_model.dart';
 import '../theme/app_colors.dart';
 import '../providers/notification_provider.dart';
+import '../screens/photo_viewer_screen.dart';
 import 'app_icon_widget.dart';
 import 'tag_chips.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -189,7 +190,7 @@ class NotificationDetailSheet extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? AppColors.surfaceLight
+                          ? AppColors.cardDark
                           : AppColors.cardLight,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
@@ -206,30 +207,29 @@ class NotificationDetailSheet extends StatelessWidget {
                   const SizedBox(height: 12),
                 ],
 
-                // New feature: image attachment preview (tap to view full-screen)
-                if (notification.imagePath != null) ...[
-                  GestureDetector(
-                    onTap: () => showDialog(
-                      context: context,
-                      builder: (_) => Dialog(
-                        backgroundColor: Colors.black,
-                        insetPadding: const EdgeInsets.all(12),
-                        child: GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: InteractiveViewer(
-                            child: Image.file(File(notification.imagePath!)),
+                // Photo vault: tap the photo to open it full screen. The old
+                // viewer was a dialog that closed on any tap, which fought with
+                // pinch-zoom; this one zooms, shares, and says when the sender
+                // deleted the message.
+                if (notification.hasImage) ...[
+                  Semantics(
+                    button: true,
+                    label: l10n.sharePhoto,
+                    child: GestureDetector(
+                      onTap: () => PhotoViewerScreen.open(context, notification),
+                      child: Hero(
+                        tag: PhotoViewerScreen.heroTag(notification),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            File(notification.imagePath!),
+                            width: double.infinity,
+                            height: 220,
+                            fit: BoxFit.cover,
+                            cacheWidth: 1080,
+                            errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
                           ),
                         ),
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.file(
-                        File(notification.imagePath!),
-                        width: double.infinity,
-                        height: 220,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
                       ),
                     ),
                   ),

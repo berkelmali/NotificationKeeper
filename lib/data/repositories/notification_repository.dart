@@ -340,6 +340,57 @@ class NotificationRepository {
     }
   }
 
+  // ─── Photo vault ───
+
+  /// Whether pictures from notifications (including WhatsApp/Telegram photo
+  /// messages) are copied into the archive. On by default.
+  Future<bool> setCapturePhotos(bool enabled) async {
+    try {
+      final bool? result = await platform.invokeMethod('setCapturePhotos', {
+        'enabled': enabled,
+      });
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint("Failed to set photo capture: '${e.message}'.");
+      return false;
+    }
+  }
+
+  Future<bool> getCapturePhotos() async {
+    try {
+      final bool? result = await platform.invokeMethod('getCapturePhotos');
+      return result ?? true;
+    } on PlatformException catch (e) {
+      debugPrint("Failed to get photo capture: '${e.message}'.");
+      return true;
+    }
+  }
+
+  Future<PhotoStorageStats> getPhotoStorageStats() async {
+    try {
+      final Map<dynamic, dynamic>? result =
+          await platform.invokeMapMethod('getPhotoStorageStats');
+      return PhotoStorageStats(
+        count: (result?['count'] as num?)?.toInt() ?? 0,
+        bytes: (result?['bytes'] as num?)?.toInt() ?? 0,
+      );
+    } on PlatformException catch (e) {
+      debugPrint("Failed to get photo stats: '${e.message}'.");
+      return const PhotoStorageStats(count: 0, bytes: 0);
+    }
+  }
+
+  /// Deletes every stored photo but keeps the notifications themselves.
+  Future<bool> deleteAllPhotos() async {
+    try {
+      final bool? result = await platform.invokeMethod('deleteAllPhotos');
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint("Failed to delete photos: '${e.message}'.");
+      return false;
+    }
+  }
+
   // ─── New feature B: Code Shredder (ephemeral verification codes) ───
 
   /// [minutes] of 0 keeps captured codes forever (shredder disabled).
@@ -406,5 +457,27 @@ class NotificationRepository {
       'notifications': notifications,
     });
     return count ?? 0;
+  }
+}
+
+/// How much space the photo vault uses, for the storage line in Settings.
+class PhotoStorageStats {
+  final int count;
+  final int bytes;
+
+  const PhotoStorageStats({required this.count, required this.bytes});
+
+  /// Human-readable size: 0 B, 812 KB, 14.3 MB, 1.2 GB.
+  String get formattedSize {
+    if (bytes < 1024) return '$bytes B';
+    const units = ['KB', 'MB', 'GB'];
+    var value = bytes / 1024;
+    var unit = 0;
+    while (value >= 1024 && unit < units.length - 1) {
+      value /= 1024;
+      unit++;
+    }
+    final digits = value >= 100 || unit == 0 ? 0 : 1;
+    return '${value.toStringAsFixed(digits)} ${units[unit]}';
   }
 }

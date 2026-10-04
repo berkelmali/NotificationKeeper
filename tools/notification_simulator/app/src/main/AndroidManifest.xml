@@ -1,0 +1,24 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:label="NK Simulator"
+        android:icon="@android:drawable/sym_action_chat">
+
+        <!-- Headless: every action is driven by "adb shell am start" with an "action" string extra (see MainActivity). -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- Serves the generated photos to the notification system the same way a
+             messaging app's FileProvider does: not exported, readable only through
+             a URI grant, which NotificationManagerService issues to listeners. -->
+        <provider
+            android:name=".ImageProvider"
+            android:authorities="com.example.nksim.images"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+    </application>
+</manifest>

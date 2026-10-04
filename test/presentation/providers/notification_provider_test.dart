@@ -22,6 +22,7 @@ void main() {
     String? tags,
     int? recalledAt,
     bool codeShredded = false,
+    String? imagePath,
   }) {
     return {
       'id': id,
@@ -40,7 +41,7 @@ void main() {
       'isOtp': false,
       'extractedCode': null,
       'isPriorityFlagged': false,
-      'imagePath': null,
+      'imagePath': imagePath,
       'recalledAt': recalledAt,
       'codeShredded': codeShredded,
     };
@@ -128,6 +129,34 @@ void main() {
       provider.setFilterMode('recalled');
 
       expect(provider.notifications, isEmpty);
+    });
+  });
+
+  group('Photo vault filter', () {
+    test('the "photos" mode keeps only notifications that carried a picture', () async {
+      stored = [
+        row(id: 1, timestamp: 1700000001000),
+        row(id: 2, timestamp: 1700000002000, imagePath: '/data/photos/a.jpg'),
+        row(id: 3, timestamp: 1700000003000, imagePath: '/data/photos/b.jpg', recalledAt: 1700000009000),
+      ];
+      final provider = NotificationProvider();
+      await provider.fetchNotifications();
+
+      provider.setFilterMode('photos');
+
+      expect(provider.notifications.map((n) => n.id), [3, 2]);
+    });
+
+    test('a photo the sender deleted is still listed, with its recall flag', () async {
+      stored = [row(id: 9, imagePath: '/data/photos/c.jpg', recalledAt: 1700000009000)];
+      final provider = NotificationProvider();
+      await provider.fetchNotifications();
+
+      provider.setFilterMode('photos');
+
+      final kept = provider.notifications.single;
+      expect(kept.hasImage, true);
+      expect(kept.isRecalled, true);
     });
   });
 

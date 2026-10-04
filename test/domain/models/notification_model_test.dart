@@ -100,6 +100,20 @@ void main() {
     });
   });
 
+  group('NotificationModel.hasImage (photo vault)', () {
+    NotificationModel withPath(String? path) => NotificationModel(
+          id: 1, packageName: 'com.whatsapp', timestamp: 0, isGroupSummary: false, imagePath: path);
+
+    test('is false without a stored picture', () {
+      expect(withPath(null).hasImage, false);
+      expect(withPath('').hasImage, false);
+    });
+
+    test('is true once a picture path is stored', () {
+      expect(withPath('/data/user/0/app/files/notification_images/x.jpg').hasImage, true);
+    });
+  });
+
   group('NotificationModel.isRecalled (new feature A)', () {
     test('is false while recalledAt is null', () {
       expect(_baseModel().isRecalled, false);

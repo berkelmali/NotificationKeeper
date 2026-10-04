@@ -733,4 +733,46 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get codeShreddedLabel => 'Code shredded';
+
+  @override
+  String get filterPhotos => 'Photos';
+
+  @override
+  String get sectionPhotos => 'Photos';
+
+  @override
+  String get capturePhotosTitle => 'Keep photos from messages';
+
+  @override
+  String get capturePhotosSubtitle =>
+      'A private copy stays here even if the sender deletes the message';
+
+  @override
+  String photoStorageUsage(int count, String size) {
+    return '$count photos · $size';
+  }
+
+  @override
+  String get photoPrivacyNote =>
+      'Saved copies are stored privately on this phone, resized, with location and other hidden data removed.';
+
+  @override
+  String get deleteAllPhotosTitle => 'Delete all photos';
+
+  @override
+  String get deleteAllPhotosBody =>
+      'Every stored photo will be removed. The notifications themselves stay in the archive.';
+
+  @override
+  String get photosDeleted => 'Photos deleted';
+
+  @override
+  String get photoKeptAfterRecall =>
+      'The sender deleted this message. The photo is still here.';
+
+  @override
+  String get sharePhoto => 'Share photo';
+
+  @override
+  String get closeAction => 'Close';
 }

@@ -30,6 +30,9 @@ class SettingsProvider extends ChangeNotifier {
   // kept before its digits are destroyed. 0 = keep codes (shredder off). ───
   int _otpShredMinutes = 0;
 
+  // ─── Photo vault: keep pictures from notifications. On by default. ───
+  bool _capturePhotos = true;
+
   // ─── New feature: multi-language support. null = follow system language ───
   Locale? _appLocale;
 
@@ -44,6 +47,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get biometricLockEnabled => _biometricLockEnabled;
   bool get instantAlertsEnabled => _instantAlertsEnabled;
   int get otpShredMinutes => _otpShredMinutes;
+  bool get capturePhotos => _capturePhotos;
   Locale? get appLocale => _appLocale;
 
   Future<void> setAppLocale(Locale? locale) async {
@@ -106,6 +110,9 @@ class SettingsProvider extends ChangeNotifier {
 
     // New feature B: Code Shredder window
     _otpShredMinutes = prefs.getInt('otpShredMinutes') ?? 0;
+
+    // Photo vault
+    _capturePhotos = prefs.getBool('capturePhotos') ?? true;
 
     // New feature: multi-language support
     final localeCode = prefs.getString('appLocaleCode');
@@ -230,6 +237,16 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('otpShredMinutes', minutes);
+  }
+
+  // ─── Photo vault. Local persistence only - the caller also pushes the
+  // value to the native listener through NotificationRepository.setCapturePhotos,
+  // matching the other settings that the listener reads. ───
+  Future<void> setCapturePhotos(bool enabled) async {
+    _capturePhotos = enabled;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('capturePhotos', enabled);
   }
 
   ThemeMode _themeModeFromString(String str) {

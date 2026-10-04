@@ -242,5 +242,18 @@
   "codeShredHour": "1 saat sonra",
   "codeShredDay": "1 gün sonra",
   "codeShredDone": "{count} kod imha edildi",
-  "codeShreddedLabel": "Kod imha edildi"
+  "codeShreddedLabel": "Kod imha edildi",
+
+  "filterPhotos": "Fotoğraflar",
+  "sectionPhotos": "Fotoğraflar",
+  "capturePhotosTitle": "Mesajlardaki fotoğrafları sakla",
+  "capturePhotosSubtitle": "Gönderen mesajı silse bile özel bir kopya burada kalır",
+  "photoStorageUsage": "{count} fotoğraf · {size}",
+  "photoPrivacyNote": "Kopyalar bu telefonda gizli olarak, küçültülerek ve konum gibi gizli bilgileri temizlenerek saklanır.",
+  "deleteAllPhotosTitle": "Tüm fotoğrafları sil",
+  "deleteAllPhotosBody": "Saklanan tüm fotoğraflar silinecek. Bildirimlerin kendisi arşivde kalır.",
+  "photosDeleted": "Fotoğraflar silindi",
+  "photoKeptAfterRecall": "Gönderen bu mesajı sildi. Fotoğraf hâlâ burada.",
+  "sharePhoto": "Fotoğrafı paylaş",
+  "closeAction": "Kapat"
 }
