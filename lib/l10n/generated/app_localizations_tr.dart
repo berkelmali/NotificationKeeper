@@ -774,4 +774,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get closeAction => 'Kapat';
+
+  @override
+  String get showSystemApps => 'Sistem uygulamalarını göster';
 }

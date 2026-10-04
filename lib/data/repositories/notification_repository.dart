@@ -96,9 +96,13 @@ class NotificationRepository {
     }
   }
 
-  Future<List<AppInfoModel>> getMonitoredApps() async {
+  /// Apps for the Apps screen. By default only launcher apps plus anything
+  /// already monitored or archived; [includeSystem] adds every installed package.
+  Future<List<AppInfoModel>> getMonitoredApps({bool includeSystem = false}) async {
     try {
-      final List<dynamic>? result = await platform.invokeListMethod('getMonitoredApps');
+      final List<dynamic>? result = await platform.invokeListMethod('getMonitoredApps', {
+        'includeSystem': includeSystem,
+      });
       if (result == null) return [];
       return result.map((e) => AppInfoModel.fromMap(e as Map<Object?, Object?>)).toList();
     } on PlatformException catch (e) {

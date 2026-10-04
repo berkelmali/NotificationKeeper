@@ -10,6 +10,7 @@ import 'presentation/providers/notification_provider.dart';
 import 'presentation/providers/app_list_provider.dart';
 import 'presentation/providers/stats_provider.dart';
 import 'presentation/providers/settings_provider.dart';
+import 'presentation/providers/app_registry.dart';
 import 'presentation/theme/app_theme.dart';
 import 'l10n/generated/app_localizations.dart';
 
@@ -37,6 +38,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AppListProvider()),
         ChangeNotifierProvider(create: (_) => StatsProvider()),
         ChangeNotifierProvider.value(value: settingsProvider),
+        // App detection: real names and icons for every package the UI shows.
+        ChangeNotifierProvider(create: (_) => AppRegistry()),
       ],
       child: const NotificationKeeperApp(),
     ),

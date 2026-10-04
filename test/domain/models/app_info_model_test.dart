@@ -102,4 +102,29 @@ void main() {
       expect(AppInfoModel.fromMap(map).notificationCount, 0);
     });
   });
+
+  group('App detection flags', () {
+    test('parses isSystem and isLaunchable from the native map', () {
+      final app = AppInfoModel.fromMap(const {
+        'packageName': 'com.android.shell',
+        'appName': 'Shell',
+        'isMonitored': false,
+        'isSystem': true,
+        'isLaunchable': false,
+      });
+      expect(app.isSystem, isTrue);
+      expect(app.isLaunchable, isFalse);
+    });
+
+    test('treats an app as a launcher app when the flag is missing', () {
+      // Older native builds did not send these fields.
+      final app = AppInfoModel.fromMap(const {
+        'packageName': 'com.whatsapp',
+        'appName': 'WhatsApp',
+        'isMonitored': true,
+      });
+      expect(app.isSystem, isFalse);
+      expect(app.isLaunchable, isTrue);
+    });
+  });
 }

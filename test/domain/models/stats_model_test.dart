@@ -43,9 +43,16 @@ void main() {
       expect(stats.topApp, 'Telegram');
     });
 
-    test('falls back to the raw package name when it has no dots', () {
+    test('capitalizes a package name that has no dots', () {
       final stats = _statsWith(appCounts: const {'standalonepkg': 3});
-      expect(stats.topApp, 'standalonepkg');
+      expect(stats.topApp, 'Standalonepkg');
+    });
+
+    // Regression: the old guesser took the last segment, so these came out as
+    // "Messenger" and "Android".
+    test('names Telegram and Instagram correctly', () {
+      expect(_statsWith(appCounts: const {'org.telegram.messenger': 9}).topApp, 'Telegram');
+      expect(_statsWith(appCounts: const {'com.instagram.android': 9}).topApp, 'Instagram');
     });
 
     test('breaks ties deterministically by keeping stable sort order', () {

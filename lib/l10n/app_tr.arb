@@ -255,5 +255,6 @@
   "photosDeleted": "Fotoğraflar silindi",
   "photoKeptAfterRecall": "Gönderen bu mesajı sildi. Fotoğraf hâlâ burada.",
   "sharePhoto": "Fotoğrafı paylaş",
-  "closeAction": "Kapat"
+  "closeAction": "Kapat",
+  "showSystemApps": "Sistem uygulamalarını göster"
 }

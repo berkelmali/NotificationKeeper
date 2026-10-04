@@ -13,6 +13,7 @@ import '../widgets/notification_card.dart';
 import '../widgets/shimmer_loading.dart';
 import '../widgets/hourly_heatmap.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../providers/app_registry.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -303,7 +304,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ),
                     const SizedBox(height: 12),
                     ...stats.topApps.map((entry) {
-                      final appName = _getAppShortName(entry.key);
+                      final appName = context.appLabel(entry.key);
                       final maxCount = stats.topApps.first.value;
                       final ratio = maxCount > 0 ? entry.value / maxCount : 0.0;
 
@@ -430,13 +431,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  String _getAppShortName(String packageName) {
-    final parts = packageName.split('.');
-    if (parts.length >= 2) {
-      return parts.last[0].toUpperCase() + parts.last.substring(1);
-    }
-    return packageName;
-  }
 }
 
 // ─── Stat Card Widget ───

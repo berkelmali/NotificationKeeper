@@ -1,3 +1,5 @@
+import '../apps/known_apps.dart';
+
 class StatsModel {
   final int totalCount;
   final int todayCount;
@@ -32,11 +34,10 @@ class StatsModel {
     if (appCounts.isEmpty) return 'None';
     final sorted = appCounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    final pkg = sorted.first.key;
-    final parts = pkg.split('.');
-    return parts.length >= 2
-        ? parts.last[0].toUpperCase() + parts.last.substring(1)
-        : pkg;
+    // Same naming as the rest of the UI: the verified known-app table, then a
+    // readable guess. (This was a fifth copy of the last-segment guesser that
+    // called Telegram "Messenger".)
+    return KnownApps.labelFor(sorted.first.key);
   }
 
   int get topAppCount {

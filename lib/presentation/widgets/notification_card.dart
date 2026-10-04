@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import 'app_icon_widget.dart';
 import 'glass_card.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../providers/app_registry.dart';
 
 class NotificationCard extends StatelessWidget {
   final NotificationModel notification;
@@ -24,13 +25,6 @@ class NotificationCard extends StatelessWidget {
     this.index = 0,
   });
 
-  String _getAppShortName(String packageName) {
-    final parts = packageName.split('.');
-    if (parts.length >= 2) {
-      return parts.last[0].toUpperCase() + parts.last.substring(1);
-    }
-    return packageName;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +46,7 @@ class NotificationCard extends StatelessWidget {
       timeStr = DateFormat.MMMd(Localizations.localeOf(context).toString()).format(date);
     }
 
-    final appName = _getAppShortName(notification.packageName);
+    final appName = context.appLabel(notification.packageName);
     final hasTags = notification.tagList.isNotEmpty;
 
     Widget card = GlassCard(

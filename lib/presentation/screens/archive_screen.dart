@@ -11,6 +11,7 @@ import '../widgets/date_header.dart';
 import '../widgets/recent_codes_widget.dart';
 import '../../domain/models/notification_model.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../providers/app_registry.dart';
 
 class ArchiveScreen extends StatefulWidget {
   const ArchiveScreen({super.key});
@@ -479,7 +480,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                         ),
                       // App filter chips
                       ...provider.uniqueApps.take(5).map((pkg) {
-                        final name = _getAppShortName(pkg);
+                        final name = context.appLabel(pkg);
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: _FilterChip(
@@ -599,13 +600,6 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     );
   }
 
-  String _getAppShortName(String packageName) {
-    final parts = packageName.split('.');
-    if (parts.length >= 2) {
-      return parts.last[0].toUpperCase() + parts.last.substring(1);
-    }
-    return packageName;
-  }
 }
 
 class _FilterChip extends StatelessWidget {

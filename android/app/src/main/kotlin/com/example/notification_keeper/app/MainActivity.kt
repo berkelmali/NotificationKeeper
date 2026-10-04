@@ -12,6 +12,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.notification_keeper.apps.AppCatalog
 import com.example.notification_keeper.data.database.AppDatabase
 import com.example.notification_keeper.data.entity.AppPreferenceEntity
 import com.example.notification_keeper.data.entity.NotificationEntity
@@ -416,32 +417,42 @@ class MainActivity: FlutterFragmentActivity() {
                     }
                 }
                 "getMonitoredApps" -> {
+                    // App detection: by default only the apps a person thinks of as
+                    // apps - launcher entries - plus anything already monitored or
+                    // already in the archive. The unfiltered list (~250 packages on
+                    // stock Android, led by navigation-bar overlays) is still there
+                    // behind includeSystem for the rare app without a launcher icon.
+                    val includeSystem = call.argument<Boolean>("includeSystem") ?: false
                     scope.launch(Dispatchers.IO) {
                         try {
                             val db = AppDatabase.getDatabase(applicationContext)
-                            val pm = packageManager
-                            val installed = pm.getInstalledPackages(0)
-                            
-                            val notifCounts = db.notificationDao().getCountByApp()
-                            val countMap = notifCounts.associate { it.packageName to it.count }
+                            val catalog = AppCatalog(applicationContext)
+                            val launchable = catalog.launchablePackages()
+                            val countMap = db.notificationDao().getCountByApp()
+                                .associate { it.packageName to it.count }
+                            val prefsMap = db.appPreferenceDao().getAll().associateBy { it.packageName }
 
-                            // New feature: fetch all preferences (including snooze) in one query
-                            val allPrefs = db.appPreferenceDao().getAll()
-                            val prefsMap = allPrefs.associateBy { it.packageName }
-                            
-                            val appList = installed.map { pkg ->
-                                val pref = prefsMap[pkg.packageName]
-                                val isMonitored = pref?.isMonitored ?: false
-                                val label = pkg.applicationInfo?.loadLabel(pm)?.toString() ?: pkg.packageName
-                                mapOf(
-                                    "packageName" to pkg.packageName,
-                                    "appName" to label,
-                                    "isMonitored" to isMonitored,
-                                    "notificationCount" to (countMap[pkg.packageName] ?: 0),
-                                    "snoozedUntil" to pref?.snoozedUntil
-                                )
-                            }.sortedBy { (it["appName"] as String).lowercase() }
-                            
+                            val appList = catalog.installedApplications()
+                                .filter { info ->
+                                    includeSystem ||
+                                        info.packageName in launchable ||
+                                        prefsMap[info.packageName]?.isMonitored == true ||
+                                        (countMap[info.packageName] ?: 0) > 0
+                                }
+                                .map { info ->
+                                    val pref = prefsMap[info.packageName]
+                                    mapOf(
+                                        "packageName" to info.packageName,
+                                        "appName" to catalog.label(info),
+                                        "isMonitored" to (pref?.isMonitored ?: false),
+                                        "notificationCount" to (countMap[info.packageName] ?: 0),
+                                        "snoozedUntil" to pref?.snoozedUntil,
+                                        "isSystem" to catalog.isSystem(info),
+                                        "isLaunchable" to (info.packageName in launchable)
+                                    )
+                                }
+                                .sortedBy { (it["appName"] as String).lowercase() }
+
                             withContext(Dispatchers.Main) {
                                 result.success(appList)
                             }
@@ -450,6 +461,17 @@ class MainActivity: FlutterFragmentActivity() {
                                 result.error("PM_ERROR", e.message, null)
                             }
                         }
+                    }
+                }
+                "getAppIdentities" -> {
+                    // Real name + real icon for a batch of packages, for every place
+                    // the UI shows an app (archive cards, filters, dashboard, codes).
+                    val packages = call.argument<List<String>>("packages") ?: emptyList()
+                    val iconSize = call.argument<Number>("iconSize")?.toInt() ?: 128
+                    scope.launch(Dispatchers.IO) {
+                        val catalog = AppCatalog(applicationContext)
+                        val identities = packages.distinct().map { catalog.identity(it, iconSize) }
+                        withContext(Dispatchers.Main) { result.success(identities) }
                     }
                 }
                 "toggleAppMonitoring" -> {

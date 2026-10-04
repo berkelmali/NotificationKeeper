@@ -775,4 +775,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get closeAction => 'Close';
+
+  @override
+  String get showSystemApps => 'Show system apps';
 }

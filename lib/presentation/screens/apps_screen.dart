@@ -154,6 +154,8 @@ class _AppsScreenState extends State<AppsScreen>
                             provider.setAllMonitored(true);
                           } else if (value == 'deselect_all') {
                             provider.setAllMonitored(false);
+                          } else if (value == 'system_apps') {
+                            provider.setShowSystemApps(!provider.showSystemApps);
                           }
                         },
                         itemBuilder: (context) => [
@@ -176,6 +178,12 @@ class _AppsScreenState extends State<AppsScreen>
                                 Text(l10n.deselectAllAction),
                               ],
                             ),
+                          ),
+                          const PopupMenuDivider(),
+                          CheckedPopupMenuItem(
+                            value: 'system_apps',
+                            checked: provider.showSystemApps,
+                            child: Text(l10n.showSystemApps),
                           ),
                         ],
                       ),

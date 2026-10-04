@@ -323,5 +323,6 @@
   "photosDeleted": "Photos deleted",
   "photoKeptAfterRecall": "The sender deleted this message. The photo is still here.",
   "sharePhoto": "Share photo",
-  "closeAction": "Close"
+  "closeAction": "Close",
+  "showSystemApps": "Show system apps"
 }

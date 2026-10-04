@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../domain/models/notification_model.dart';
 import '../theme/app_colors.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../providers/app_registry.dart';
 
 /// Merged from base.apk (com.example.fluter)'s RecentCodesWidget.
 ///
@@ -65,7 +66,7 @@ class RecentCodesWidget extends StatelessWidget {
                 return _CodeChip(
                   key: ValueKey('${notif.id}_${notif.extractedCode}'),
                   code: notif.extractedCode!,
-                  appLabel: notif.packageName,
+                  appLabel: context.appLabel(notif.packageName),
                   isDark: isDark,
                 );
               },

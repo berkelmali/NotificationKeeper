@@ -10,6 +10,11 @@ class AppListProvider extends ChangeNotifier {
   String _searchQuery = '';
   String _viewMode = 'all'; // all, monitored, unmonitored
 
+  // App detection: system packages (navigation-bar overlays, shared libraries
+  // and the like) are hidden unless asked for.
+  bool _showSystemApps = false;
+  bool get showSystemApps => _showSystemApps;
+
   List<AppInfoModel> get apps => _filteredApps;
   List<AppInfoModel> get allApps => _allApps;
   bool get isLoading => _isLoading;
@@ -21,7 +26,7 @@ class AppListProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      _allApps = await _repository.getMonitoredApps();
+      _allApps = await _repository.getMonitoredApps(includeSystem: _showSystemApps);
       _applyFilters();
     } catch (e) {
       debugPrint("Error fetching apps: $e");
@@ -29,6 +34,12 @@ class AppListProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> setShowSystemApps(bool show) async {
+    if (_showSystemApps == show) return;
+    _showSystemApps = show;
+    await fetchApps();
   }
 
   void search(String query) {

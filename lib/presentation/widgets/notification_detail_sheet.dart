@@ -10,6 +10,7 @@ import '../screens/photo_viewer_screen.dart';
 import 'app_icon_widget.dart';
 import 'tag_chips.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../providers/app_registry.dart';
 
 class NotificationDetailSheet extends StatelessWidget {
   final NotificationModel notification;
@@ -23,13 +24,6 @@ class NotificationDetailSheet extends StatelessWidget {
     this.onDelete,
   });
 
-  String _getAppShortName(String packageName) {
-    final parts = packageName.split('.');
-    if (parts.length >= 2) {
-      return parts.last[0].toUpperCase() + parts.last.substring(1);
-    }
-    return packageName;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +33,7 @@ class NotificationDetailSheet extends StatelessWidget {
       'EEEE, MMM d, yyyy • HH:mm',
       Localizations.localeOf(context).toString(),
     ).format(date);
-    final appName = _getAppShortName(notification.packageName);
+    final appName = context.appLabel(notification.packageName);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
