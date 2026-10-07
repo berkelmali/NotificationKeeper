@@ -2,6 +2,7 @@ package com.example.notification_keeper.app
 
 import android.content.Intent
 import android.content.SharedPreferences
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
@@ -20,6 +21,7 @@ import com.example.notification_keeper.data.entity.NotificationEntity
 import com.example.notification_keeper.service.NotificationImageStore
 import com.example.notification_keeper.service.NotificationEvents
 import com.example.notification_keeper.service.NotificationListener
+import com.example.notification_keeper.vault.BiometricGuard
 import com.example.notification_keeper.worker.CodeShredWorker
 import com.example.notification_keeper.worker.CodeShredder
 import com.example.notification_keeper.worker.RetentionWorker
@@ -591,6 +593,40 @@ class MainActivity: FlutterFragmentActivity() {
                 "getInstantAlertsEnabled" -> {
                     val prefs = getSharedPreferences("notification_keeper_prefs", MODE_PRIVATE)
                     result.success(prefs.getBoolean("instant_alerts_enabled", true))
+                }
+                // --- Vault: fingerprint unlock, its key, and fingerprint enrollment ---
+                "biometricGuardCreate" -> {
+                    scope.launch(Dispatchers.IO) {
+                        val ok = BiometricGuard.create()
+                        withContext(Dispatchers.Main) { result.success(ok) }
+                    }
+                }
+                "biometricStatus" -> {
+                    result.success(BiometricGuard.status(this))
+                }
+                "biometricUnlock" -> {
+                    BiometricGuard.unlock(
+                        this,
+                        title = call.argument<String>("title") ?: "",
+                        subtitle = call.argument<String>("subtitle"),
+                        cancel = call.argument<String>("cancel") ?: "",
+                    ) { outcome -> result.success(outcome) }
+                }
+                // Keeps the archive out of the app switcher's thumbnail while
+                // the vault is on. Android 13+ only; screenshots stay allowed.
+                "setRecentsPreviewHidden" -> {
+                    val hidden = call.argument<Boolean>("hidden") ?: false
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        setRecentsScreenshotEnabled(!hidden)
+                    }
+                    result.success(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                }
+                "biometricGuardDelete" -> {
+                    BiometricGuard.delete()
+                    result.success(true)
+                }
+                "openBiometricEnrollment" -> {
+                    result.success(BiometricGuard.openEnrollment(this))
                 }
                 // --- Photo vault ---
                 "setCapturePhotos" -> {

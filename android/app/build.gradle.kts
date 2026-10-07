@@ -55,4 +55,7 @@ dependencies {
 
     // Merged from base.apk (com.example.fluter): WorkManager for RetentionWorker
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+
+    // Vault: fingerprint unlock through a Keystore key (BiometricGuard)
+    implementation("androidx.biometric:biometric:1.1.0")
 }

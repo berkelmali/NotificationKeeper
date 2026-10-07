@@ -47,8 +47,11 @@ Two things set it apart from a plain notification log: the **[Recall Radar](#-12
 - **Priority Keyword Engine**: Define custom keywords (e.g., `urgent`, `bank`, `security`, `code`, `transfer`).
 - **Instant Local Alerts**: Receive prioritized heads-up notifications whenever high-priority keywords or OTP codes are intercepted.
 
-### 🔐 4. Biometric Security Vault
-- **App Lock**: Protect your sensitive notification history using Fingerprint, Face Unlock, or Device PIN (`BiometricPrompt` & `local_auth`).
+### 🔐 4. Security Vault
+- **A PIN of Its Own**: Turning the vault on starts with creating a 4–8 digit PIN — the vault's own registration. Only a salted PBKDF2-HMAC-SHA256 hash is stored, and five wrong tries start an escalating lockout (30 seconds up to an hour) that survives a restart.
+- **Fingerprint Unlock, Any Number of Fingers**: Every fingerprint saved in Android opens the vault, and *Add or manage fingerprints* goes straight to Android's own fingerprint list — apps cannot enrol fingers themselves. Unlocking runs through an Android Keystore key that Android destroys when another biometric is enrolled, so a finger added later is refused until the PIN has been entered. Weak (class 2) face unlock never opens it.
+- **Covers Everything**: The lock sits above the app's navigator, so a photo left open in the viewer or an open sheet stays hidden, and unlocking returns to the same screen. While the vault is on, the app switcher shows a blank card instead of the archive (Android 13+).
+- **Forgot PIN**: The phone's screen lock confirms it is you, then you choose a new PIN — which makes the vault as strong as that screen lock, and Settings says so.
 - **Auto Re-Lock**: The vault re-locks itself after the app has been in the background for 30 seconds — it is not a once-per-boot prompt. Short enough to be a real lock, long enough that hopping to another app to type a captured code does not demand a fingerprint on the way back.
 - **Configurable Protection**: Toggle security on/off directly from Settings.
 
@@ -131,8 +134,8 @@ flowchart TD
         REPO --> SP[SettingsProvider]
         REPO --> STP[StatsProvider]
         
-        GUARD{Biometric Vault} -->|Authenticated| UI[Material 3 Glassmorphic UI]
-        GUARD -->|Locked| LOCK[BiometricLockScreen]
+        GUARD{Vault} -->|Unlocked| UI[Material 3 Glassmorphic UI]
+        GUARD -->|Locked| LOCK[VaultLockScreen: PIN + fingerprint]
         
         UI --> DASH[Dashboard Screen]
         UI --> ARCH[Archive & Search Screen]
@@ -163,12 +166,13 @@ flowchart TD
 
 1. **Zero Cloud Dependencies**: The app operates completely offline. No tracking SDKs, no analytics endpoints, no third-party ads.
 2. **Encrypted Backups**: Backup files (`.nkbackup`) can be encrypted with AES-256-CBC under a key derived with **PBKDF2-HMAC-SHA256 (120,000 iterations, random 16-byte salt)**, plus a randomly generated IV per backup. The salt and iteration count travel in the file, so the cost can be raised later without stranding existing backups — and files written by older versions (unsalted SHA-256) still restore.
-3. **Biometric Guard**: Biometric authentication uses Android's native `BiometricPrompt` via `FlutterFragmentActivity`, ensuring cryptographic biometric verification with device PIN fallback, and re-locks automatically after 30 seconds in the background.
+3. **Vault**: A PIN of its own (salted PBKDF2-HMAC-SHA256, persisted attempt limit), with fingerprint unlock through `BiometricPrompt` and a `CryptoObject` over an Android Keystore key that is invalidated whenever a biometric is enrolled — only the fingers that were on the phone when fingerprint unlock was switched on can open it until the PIN is entered again. Re-locks after 30 seconds in the background.
 4. **Sandboxed Media**: Cached notification images are stored in `context.filesDir/notification_images/`—isolated from the public gallery and invisible to other apps.
 5. **Ephemeral Secrets**: With the [Code Shredder](#-13-code-shredder--ephemeral-verification-codes) enabled, captured verification codes are destroyed in place once they expire, so an old archive stops being a liability.
 
 ### Known limits, stated plainly
 - **Recall Radar is a heuristic** (see feature 12) — a strong signal that a message was withdrawn, not a guarantee.
+- The vault is an **access lock**: the archive sits in the app's private storage and is not separately encrypted, and *Forgot PIN* trusts the phone's screen lock.
 - Encrypted backups are **not authenticated** (no HMAC/AEAD). A wrong passphrase is caught by padding and JSON validation rather than by a MAC, and a tampered file is detected only if it fails to parse.
 - The **Kotlin layer has no automated tests**. The listener, the workers and the Room migrations are covered by manual device testing only.
 
@@ -274,7 +278,10 @@ Test suite includes:
 - **`backup_service_test.dart`**: AES-256 round-trip, per-backup random salt and IV, restoring legacy (pre-PBKDF2) backups, invalid passphrase rejection, corruption handling.
 - **`settings_provider_test.dart`**: SharedPreferences persistence for retention days, keyword radar, biometric flags, and the code-shred window.
 - **`app_info_model_test.dart`** / **`stats_model_test.dart`**: App preferences, snooze state, and dashboard aggregates.
-- **`biometric_lock_screen_test.dart`**: The vault auto-re-lock timing rule, including its boundaries.
+- **`vault_service_test.dart`**: PIN format, salted hashing (the PIN itself is never stored), the attempt limit and escalating lockout, and that a restart does not reset it.
+- **`vault_provider_test.dart`**: Fingerprint unlock only ever on top of a PIN, how an unlock attempt ended, and the round trip to Android's fingerprint settings.
+- **`vault_lock_screen_test.dart`**: Re-lock timing, and the lock covering any screen left open on top — unlocking returns to it.
+- **`pin_pad_test.dart`**: The keypad, length limits, the wrong-PIN reset, and the lockout countdown format.
 - **`recent_codes_widget_test.dart`**: OTP filtering, copy-to-clipboard actions, and auto-masking timer.
 
 `flutter analyze` is clean — zero infos, warnings or errors.

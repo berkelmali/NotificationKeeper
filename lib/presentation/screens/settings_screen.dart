@@ -4,6 +4,10 @@ import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import '../providers/notification_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/vault_provider.dart';
+import 'vault_setup_screen.dart';
+import '../widgets/pin_pad.dart';
+import '../../data/services/vault_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
 import '../../data/repositories/notification_repository.dart';
@@ -124,42 +128,9 @@ class SettingsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // ─── Security (merged from base.apk: Biometric Vault lock) ───
+            // ─── Security: the vault (PIN registration, fingerprint unlock) ───
             _SectionHeader(title: l10n.sectionSecurity),
-            Consumer<SettingsProvider>(
-              builder: (context, settings, _) {
-                return GlassCard(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: SwitchListTile(
-                    secondary: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: settings.biometricLockEnabled
-                            ? AppColors.primaryStart.withValues(alpha: 0.15)
-                            : (isDark ? AppColors.cardDark : AppColors.cardLight),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.fingerprint_rounded,
-                        color: settings.biometricLockEnabled
-                            ? AppColors.primaryStart
-                            : AppColors.textTertiary,
-                        size: 20,
-                      ),
-                    ),
-                    title: Text(l10n.biometricLockTitle),
-                    subtitle: Text(
-                      settings.biometricLockEnabled
-                          ? l10n.biometricLockSubtitleOn
-                          : l10n.biometricLockSubtitleOff,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    value: settings.biometricLockEnabled,
-                    onChanged: (value) => settings.setBiometricLockEnabled(value),
-                  ),
-                );
-              },
-            ),
+            const _VaultCard(),
             const SizedBox(height: 12),
 
             // ─── New feature B: Code Shredder (ephemeral verification codes) ───
@@ -1382,6 +1353,224 @@ class _PhotoVaultCardState extends State<_PhotoVaultCard> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Security settings for the vault: turning it on (PIN registration), changing
+/// the PIN, fingerprint unlock, and a way into Android's own fingerprint
+/// settings - the only place fingerprints can be added.
+class _VaultCard extends StatefulWidget {
+  const _VaultCard();
+
+  @override
+  State<_VaultCard> createState() => _VaultCardState();
+}
+
+class _VaultCardState extends State<_VaultCard> with WidgetsBindingObserver {
+  /// Null until known; the fingerprint rows stay hidden on phones without a
+  /// strong biometric sensor.
+  BiometricStatus? _status;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _refreshStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Back from Android's fingerprint settings: the answer may have changed.
+    if (state == AppLifecycleState.resumed) _refreshStatus();
+  }
+
+  Future<void> _refreshStatus() async {
+    final status = await context.read<VaultProvider>().biometricStatus();
+    if (mounted) setState(() => _status = status);
+  }
+
+  /// Asks for the current PIN in a sheet; true when it was entered correctly.
+  Future<bool> _confirmPin() async {
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => const _ConfirmPinSheet(),
+    );
+    return ok == true;
+  }
+
+  void _snack(String message, {SnackBarAction? action}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), action: action));
+  }
+
+  Future<void> _toggleVault(bool turnOn) async {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = context.read<SettingsProvider>();
+    final vault = context.read<VaultProvider>();
+
+    if (turnOn) {
+      await VaultSetupScreen.open(context);
+      if (!mounted || !vault.hasPin) return;
+      // The PIN supersedes the older biometric-only lock.
+      await settings.setBiometricLockEnabled(false);
+      _snack(l10n.vaultSetupDone);
+      return;
+    }
+    if (vault.hasPin && !await _confirmPin()) return;
+    await vault.disable();
+    await settings.setBiometricLockEnabled(false);
+    if (mounted) _snack(l10n.vaultTurnedOff);
+  }
+
+  Future<void> _changePin() async {
+    final l10n = AppLocalizations.of(context)!;
+    if (!await _confirmPin() || !mounted) return;
+    final changed = await VaultSetupScreen.open(context, mode: VaultSetupMode.change);
+    if (changed == true && mounted) _snack(l10n.vaultPinChanged);
+  }
+
+  Future<void> _toggleBiometric(bool on) async {
+    final l10n = AppLocalizations.of(context)!;
+    final vault = context.read<VaultProvider>();
+    if (!on) return vault.disableBiometric();
+    if (await vault.enableBiometric() || !mounted) return;
+    _snack(
+      l10n.vaultNoBiometricEnrolled,
+      action: SnackBarAction(label: l10n.vaultAddFingerprint, onPressed: vault.openEnrollment),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final vault = context.watch<VaultProvider>();
+    final settings = context.watch<SettingsProvider>();
+    final on = vault.hasPin || settings.biometricLockEnabled;
+    final fingerprints = vault.hasPin && _status != null && _status != BiometricStatus.unsupported;
+
+    Widget icon(IconData data, bool active) => Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: active
+                ? AppColors.primaryStart.withValues(alpha: 0.15)
+                : (isDark ? AppColors.cardDark : AppColors.cardLight),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(data, size: 20, color: active ? AppColors.primaryStart : AppColors.textTertiary),
+        );
+
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        children: [
+          SwitchListTile(
+            secondary: icon(Icons.lock_rounded, on),
+            title: Text(l10n.vaultLockTitle),
+            subtitle: Text(
+              on ? l10n.vaultLockOnSubtitle : l10n.vaultLockOffSubtitle,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            value: on,
+            onChanged: _toggleVault,
+          ),
+          if (vault.hasPin)
+            ListTile(
+              leading: icon(Icons.pin_rounded, true),
+              title: Text(l10n.vaultChangePin),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: _changePin,
+            ),
+          if (fingerprints) ...[
+            SwitchListTile(
+              secondary: icon(Icons.fingerprint_rounded, vault.biometricEnabled),
+              title: Text(l10n.vaultFingerprintUnlock),
+              value: vault.biometricEnabled,
+              onChanged: _toggleBiometric,
+            ),
+            ListTile(
+              leading: icon(Icons.add_circle_outline_rounded, false),
+              title: Text(l10n.vaultManageFingerprints),
+              subtitle: Text(
+                l10n.vaultManageFingerprintsSubtitle,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+              onTap: vault.openEnrollment,
+            ),
+          ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: Text(
+              l10n.vaultExplainer,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textTertiary,
+                    height: 1.5,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The current PIN, asked for before the vault is switched off or the PIN is
+/// changed. Pops with true once it was entered correctly.
+class _ConfirmPinSheet extends StatefulWidget {
+  const _ConfirmPinSheet();
+
+  @override
+  State<_ConfirmPinSheet> createState() => _ConfirmPinSheetState();
+}
+
+class _ConfirmPinSheetState extends State<_ConfirmPinSheet> {
+  String? _error;
+  int _signal = 0;
+  bool _busy = false;
+
+  Future<void> _submit(String pin) async {
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _busy = true);
+    final check = await context.read<VaultProvider>().verifyPin(pin);
+    if (!mounted) return;
+    if (check.isOk) {
+      Navigator.pop(context, true);
+      return;
+    }
+    setState(() {
+      _busy = false;
+      _signal++;
+      _error = check.result == PinCheckResult.lockedOut
+          ? l10n.vaultLockedOut(formatLockoutTime(check.retryIn ?? Duration.zero))
+          : l10n.vaultWrongPin(check.attemptsLeft);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+        child: PinPad(
+          title: l10n.vaultConfirmPinTitle,
+          submitLabel: l10n.vaultContinue,
+          deleteLabel: l10n.deleteDigit,
+          enabled: !_busy,
+          errorText: _error,
+          errorSignal: _signal,
+          onSubmit: _submit,
+        ),
+      ),
     );
   }
 }
