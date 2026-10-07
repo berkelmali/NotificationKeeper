@@ -35,11 +35,12 @@ Two things set it apart from a plain notification log: the **[Recall Radar](#-12
 
 ### 🔔 1. Intelligent Background Interception
 - **Native Android Listener**: Hooks directly into Android's `NotificationListenerService` for lightweight, zero-latency background logging without draining battery.
+- **Ready From Day One**: Right after access is granted, a one-time picker asks which apps to keep, with chat apps and the phone's default SMS app (whatever its brand) already ticked — so the archive is not empty until someone finds the Apps tab.
 - **Smart Chat Parser**: Accurately extracts real senders and content from messaging apps (e.g., WhatsApp, Telegram, Signal), filtering out noisy group-summary updates and ongoing system tasks.
 - **Image Attachment Caching**: Automatically saves `BigPictureStyle` notification media (e.g. photos received in messages) to protected app-internal storage with an in-app zoomable viewer.
 
 ### 🔢 2. Smart OTP & Verification Code Radar
-- **Instant Code Detection**: Automatically recognizes 4-to-8 digit one-time passwords (OTP), 2FA tokens, and SMS verification codes using regex intelligence.
+- **Instant Code Detection**: Finds the 4–8 digit one-time code by its distance to a code word — in English and Turkish (also typed without Turkish letters), plus a few other languages — and ignores what only looks like one: the sender's phone number, call-centre numbers, amounts of money, times, dates and years.
 - **Recent Codes Ribbon**: Displays captured codes at the top of the archive for 1-tap clipboard copying.
 - **Auto-Masking Privacy**: Masked previews hide sensitive codes after copying to protect your privacy from shoulder surfers.
 
@@ -174,7 +175,7 @@ flowchart TD
 - **Recall Radar is a heuristic** (see feature 12) — a strong signal that a message was withdrawn, not a guarantee.
 - The vault is an **access lock**: the archive sits in the app's private storage and is not separately encrypted, and *Forgot PIN* trusts the phone's screen lock.
 - Encrypted backups are **not authenticated** (no HMAC/AEAD). A wrong passphrase is caught by padding and JSON validation rather than by a MAC, and a tampered file is detected only if it fails to parse.
-- The **Kotlin layer has no automated tests**. The listener, the workers and the Room migrations are covered by manual device testing only.
+- The **Kotlin layer is mostly untested**: only the code extractor has JVM unit tests. The listener, the workers and the Room migrations are covered by manual device testing only.
 
 ---
 
@@ -283,10 +284,19 @@ Test suite includes:
 - **`vault_lock_screen_test.dart`**: Re-lock timing, and the lock covering any screen left open on top — unlocking returns to it.
 - **`pin_pad_test.dart`**: The keypad, length limits, the wrong-PIN reset, and the lockout countdown format.
 - **`recent_codes_widget_test.dart`**: OTP filtering, copy-to-clipboard actions, and auto-masking timer.
+- **`app_picker_screen_test.dart`**: The first-run picker — which apps start ticked, keeping and skipping, search, and that anyone already keeping an app is never asked.
+
+The Kotlin code extractor has JVM unit tests of its own (run from `android/`):
+
+```bash
+./gradlew :app:testDebugUnitTest
+```
+
+- **`CodeExtractorTest.kt`**: English and Turkish messages (upper case, without Turkish letters), codes before or after the word or split in two, and the traps — phone numbers, amounts, years, dates and times.
 
 `flutter analyze` is clean — zero infos, warnings or errors.
 
-> The Kotlin layer (listener, workers, Room migrations) has no automated tests. Migration `v6 → v7` in particular is worth exercising once on a device that already has data before shipping.
+> The rest of the Kotlin layer (listener, workers, Room migrations) has no automated tests. Migration `v6 → v7` in particular is worth exercising once on a device that already has data before shipping.
 
 ---
 
