@@ -368,5 +368,14 @@
   "vaultNewPinTitle": "Choose a new PIN",
   "vaultUsePin": "Use PIN",
   "vaultFingerprintLockedOut": "Too many fingerprint tries. Use your PIN.",
-  "vaultForgotNeedsScreenLock": "Resetting the PIN needs your phone's screen lock, and this phone has none. Set one in Android settings first."
+  "vaultForgotNeedsScreenLock": "Resetting the PIN needs your phone's screen lock, and this phone has none. Set one in Android settings first.",
+  "appPickerTitle": "Pick the apps to keep",
+  "appPickerSubtitle": "Chat apps and your SMS app are already ticked, so messages and codes are kept from the start. You can change this any time under Apps.",
+  "appPickerSuggested": "Suggested",
+  "appPickerOthers": "Other apps",
+  "appPickerSmsHint": "Your SMS app - verification codes arrive here",
+  "appPickerKeep": "{count, plural, =1{Keep 1 app} other{Keep {count} apps}}",
+  "@appPickerKeep": {"placeholders":{"count":{"type":"int"}}},
+  "appPickerNone": "Tick at least one app",
+  "appPickerSkip": "Skip for now"
 }

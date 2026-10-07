@@ -127,4 +127,33 @@ void main() {
       expect(app.isLaunchable, isTrue);
     });
   });
+
+  group('AppInfoModel.copyWith', () {
+    final original = AppInfoModel(
+      packageName: 'com.android.overlay',
+      appName: 'Overlay',
+      isMonitored: false,
+      notificationCount: 7,
+      snoozedUntil: DateTime(2026, 10, 7, 12),
+      isSystem: true,
+      isLaunchable: false,
+    );
+
+    test('switching monitoring keeps every other field', () {
+      // The provider used to rebuild the model by hand and dropped the
+      // system/launcher flags on every toggle.
+      final on = original.copyWith(isMonitored: true);
+      expect(on.isMonitored, isTrue);
+      expect(on.isSystem, isTrue);
+      expect(on.isLaunchable, isFalse);
+      expect(on.notificationCount, 7);
+      expect(on.snoozedUntil, original.snoozedUntil);
+    });
+
+    test('a snooze can be set and cleared', () {
+      final until = DateTime(2026, 10, 8);
+      expect(original.copyWith(snoozedUntil: until).snoozedUntil, until);
+      expect(original.copyWith(clearSnooze: true).snoozedUntil, isNull);
+    });
+  });
 }

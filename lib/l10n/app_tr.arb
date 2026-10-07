@@ -298,5 +298,13 @@
   "vaultNewPinTitle": "Yeni PIN'ini belirle",
   "vaultUsePin": "PIN kullan",
   "vaultFingerprintLockedOut": "Çok fazla parmak izi denemesi. PIN'ini kullan.",
-  "vaultForgotNeedsScreenLock": "PIN'i sıfırlamak için telefonun ekran kilidi gerekir ve bu telefonda yok. Önce Android ayarlarından bir ekran kilidi belirle."
+  "vaultForgotNeedsScreenLock": "PIN'i sıfırlamak için telefonun ekran kilidi gerekir ve bu telefonda yok. Önce Android ayarlarından bir ekran kilidi belirle.",
+  "appPickerTitle": "Saklanacak uygulamaları seç",
+  "appPickerSubtitle": "Sohbet uygulamaların ve SMS uygulaman zaten işaretli; mesajlar ve kodlar en baştan saklanır. Bunu istediğin zaman Uygulamalar sekmesinden değiştirebilirsin.",
+  "appPickerSuggested": "Önerilen",
+  "appPickerOthers": "Diğer uygulamalar",
+  "appPickerSmsHint": "SMS uygulaman - doğrulama kodları buraya gelir",
+  "appPickerKeep": "{count} uygulamayı sakla",
+  "appPickerNone": "En az bir uygulama işaretle",
+  "appPickerSkip": "Şimdilik geç"
 }

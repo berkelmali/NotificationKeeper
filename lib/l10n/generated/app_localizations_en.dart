@@ -921,4 +921,38 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get vaultForgotNeedsScreenLock =>
       'Resetting the PIN needs your phone\'s screen lock, and this phone has none. Set one in Android settings first.';
+
+  @override
+  String get appPickerTitle => 'Pick the apps to keep';
+
+  @override
+  String get appPickerSubtitle =>
+      'Chat apps and your SMS app are already ticked, so messages and codes are kept from the start. You can change this any time under Apps.';
+
+  @override
+  String get appPickerSuggested => 'Suggested';
+
+  @override
+  String get appPickerOthers => 'Other apps';
+
+  @override
+  String get appPickerSmsHint =>
+      'Your SMS app - verification codes arrive here';
+
+  @override
+  String appPickerKeep(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Keep $count apps',
+      one: 'Keep 1 app',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get appPickerNone => 'Tick at least one app';
+
+  @override
+  String get appPickerSkip => 'Skip for now';
 }

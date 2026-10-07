@@ -111,6 +111,16 @@ class NotificationRepository {
     }
   }
 
+  /// The phone's default SMS app, if it has one.
+  Future<String?> getDefaultSmsPackage() async {
+    try {
+      return await platform.invokeMethod<String>('getDefaultSmsPackage');
+    } on PlatformException catch (e) {
+      debugPrint("Failed to get the SMS app: '${e.message}'.");
+      return null;
+    }
+  }
+
   Future<bool> toggleAppMonitoring(String packageName, bool isMonitored) async {
     try {
       final bool? result = await platform.invokeMethod('toggleAppMonitoring', {

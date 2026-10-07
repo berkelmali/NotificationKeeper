@@ -23,6 +23,18 @@ class AppInfoModel {
 
   bool get isSnoozed => snoozedUntil != null && snoozedUntil!.isAfter(DateTime.now());
 
+  AppInfoModel copyWith({bool? isMonitored, DateTime? snoozedUntil, bool clearSnooze = false}) {
+    return AppInfoModel(
+      packageName: packageName,
+      appName: appName,
+      isMonitored: isMonitored ?? this.isMonitored,
+      notificationCount: notificationCount,
+      snoozedUntil: clearSnooze ? null : (snoozedUntil ?? this.snoozedUntil),
+      isSystem: isSystem,
+      isLaunchable: isLaunchable,
+    );
+  }
+
   factory AppInfoModel.fromMap(Map<Object?, Object?> map) {
     final snoozeRaw = map['snoozedUntil'] as num?;
     return AppInfoModel(

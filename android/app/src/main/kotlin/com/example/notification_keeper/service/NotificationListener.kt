@@ -27,12 +27,6 @@ class NotificationListener : NotificationListenerService() {
     private lateinit var database: AppDatabase
     private val imageStore by lazy { NotificationImageStore(applicationContext) }
 
-    // Merged from base.apk: OTP Regex. Matches context words near a 4-to-8 digit number.
-    private val otpRegex = Regex(
-        "(?i)\\b(?:code|otp|pin|password|verification)\\b.*?\\b(\\d{4,8})\\b" +
-        "|\\b(\\d{4,8})\\b.*?\\b(?:code|otp|pin|password|verification)\\b"
-    )
-
     override fun onCreate() {
         super.onCreate()
         database = AppDatabase.getDatabase(applicationContext)
@@ -106,18 +100,10 @@ class NotificationListener : NotificationListenerService() {
                 if (duplicate != null) return@launch
 
 
-                // 4. Merged from base.apk: OTP extraction + Keyword Radar
+                // 4. One-time code + Keyword Radar
                 val combinedContent = "${title.orEmpty()} ${text.orEmpty()}"
-
-                var isOtp = false
-                var extractedCode: String? = null
-                val otpMatch = otpRegex.find(combinedContent)
-                if (otpMatch != null) {
-                    isOtp = true
-                    extractedCode = otpMatch.groupValues
-                        .drop(1)
-                        .firstOrNull { it.isNotEmpty() && it.matches(Regex("\\d{4,8}")) }
-                }
+                val extractedCode = CodeExtractor.extract(title, text)
+                val isOtp = extractedCode != null
 
                 val isPriorityFlagged = getKeywordPattern()?.matcher(combinedContent)?.find() ?: false
 

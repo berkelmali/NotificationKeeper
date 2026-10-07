@@ -6,11 +6,13 @@ import 'archive_screen.dart';
 import 'apps_screen.dart';
 import 'settings_screen.dart';
 import 'permission_screen.dart';
+import 'app_picker_screen.dart';
 import '../widgets/custom_bottom_nav.dart';
 import '../../data/repositories/notification_repository.dart';
 import '../../data/services/notification_events.dart';
 import '../providers/notification_provider.dart';
 import '../providers/stats_provider.dart';
+import '../providers/settings_provider.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -116,6 +118,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       
     if (!_hasPermission) {
       return PermissionScreen(onPermissionGranted: _checkPermission);
+    }
+
+    // First run: nothing is kept until some app is switched on, so ask once.
+    if (!context.select<SettingsProvider, bool>((s) => s.appPickerDone)) {
+      return const AppPickerScreen();
     }
 
     return Scaffold(

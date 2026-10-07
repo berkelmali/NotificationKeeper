@@ -1717,6 +1717,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Resetting the PIN needs your phone\'s screen lock, and this phone has none. Set one in Android settings first.'**
   String get vaultForgotNeedsScreenLock;
+
+  /// No description provided for @appPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the apps to keep'**
+  String get appPickerTitle;
+
+  /// No description provided for @appPickerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat apps and your SMS app are already ticked, so messages and codes are kept from the start. You can change this any time under Apps.'**
+  String get appPickerSubtitle;
+
+  /// No description provided for @appPickerSuggested.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested'**
+  String get appPickerSuggested;
+
+  /// No description provided for @appPickerOthers.
+  ///
+  /// In en, this message translates to:
+  /// **'Other apps'**
+  String get appPickerOthers;
+
+  /// No description provided for @appPickerSmsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your SMS app - verification codes arrive here'**
+  String get appPickerSmsHint;
+
+  /// No description provided for @appPickerKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Keep 1 app} other{Keep {count} apps}}'**
+  String appPickerKeep(int count);
+
+  /// No description provided for @appPickerNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Tick at least one app'**
+  String get appPickerNone;
+
+  /// No description provided for @appPickerSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip for now'**
+  String get appPickerSkip;
 }
 
 class _AppLocalizationsDelegate

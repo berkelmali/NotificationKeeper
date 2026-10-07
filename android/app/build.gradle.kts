@@ -58,4 +58,7 @@ dependencies {
 
     // Vault: fingerprint unlock through a Keystore key (BiometricGuard)
     implementation("androidx.biometric:biometric:1.1.0")
+
+    // Plain JVM unit tests for the Kotlin layer (android/app/src/test)
+    testImplementation("junit:junit:4.13.2")
 }

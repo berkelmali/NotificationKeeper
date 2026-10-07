@@ -915,4 +915,32 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get vaultForgotNeedsScreenLock =>
       'PIN\'i sıfırlamak için telefonun ekran kilidi gerekir ve bu telefonda yok. Önce Android ayarlarından bir ekran kilidi belirle.';
+
+  @override
+  String get appPickerTitle => 'Saklanacak uygulamaları seç';
+
+  @override
+  String get appPickerSubtitle =>
+      'Sohbet uygulamaların ve SMS uygulaman zaten işaretli; mesajlar ve kodlar en baştan saklanır. Bunu istediğin zaman Uygulamalar sekmesinden değiştirebilirsin.';
+
+  @override
+  String get appPickerSuggested => 'Önerilen';
+
+  @override
+  String get appPickerOthers => 'Diğer uygulamalar';
+
+  @override
+  String get appPickerSmsHint =>
+      'SMS uygulaman - doğrulama kodları buraya gelir';
+
+  @override
+  String appPickerKeep(int count) {
+    return '$count uygulamayı sakla';
+  }
+
+  @override
+  String get appPickerNone => 'En az bir uygulama işaretle';
+
+  @override
+  String get appPickerSkip => 'Şimdilik geç';
 }

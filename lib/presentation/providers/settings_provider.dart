@@ -33,6 +33,9 @@ class SettingsProvider extends ChangeNotifier {
   // ─── Photo vault: keep pictures from notifications. On by default. ───
   bool _capturePhotos = true;
 
+  // ─── First run: the "which apps to keep" step has been answered. ───
+  bool _appPickerDone = false;
+
   // ─── New feature: multi-language support. null = follow system language ───
   Locale? _appLocale;
 
@@ -48,6 +51,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get instantAlertsEnabled => _instantAlertsEnabled;
   int get otpShredMinutes => _otpShredMinutes;
   bool get capturePhotos => _capturePhotos;
+  bool get appPickerDone => _appPickerDone;
   Locale? get appLocale => _appLocale;
 
   Future<void> setAppLocale(Locale? locale) async {
@@ -113,6 +117,9 @@ class SettingsProvider extends ChangeNotifier {
 
     // Photo vault
     _capturePhotos = prefs.getBool('capturePhotos') ?? true;
+
+    // First-run app picker
+    _appPickerDone = prefs.getBool('appPickerDone') ?? false;
 
     // New feature: multi-language support
     final localeCode = prefs.getString('appLocaleCode');
@@ -247,6 +254,13 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('capturePhotos', enabled);
+  }
+
+  Future<void> setAppPickerDone(bool done) async {
+    _appPickerDone = done;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('appPickerDone', done);
   }
 
   ThemeMode _themeModeFromString(String str) {
