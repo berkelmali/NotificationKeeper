@@ -11,6 +11,7 @@ import '../widgets/date_header.dart';
 import '../widgets/recent_codes_widget.dart';
 import '../../domain/models/notification_model.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../providers/app_registry.dart';
 
 class ArchiveScreen extends StatefulWidget {
   const ArchiveScreen({super.key});
@@ -33,12 +34,15 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<NotificationProvider>(context, listen: false)
-          .fetchNotifications();
+      Provider.of<NotificationProvider>(
+        context,
+        listen: false,
+      ).fetchNotifications();
     });
     _searchFocusNode.addListener(() {
       setState(() {
-        _showSearchHistory = _searchFocusNode.hasFocus && _searchController.text.isEmpty;
+        _showSearchHistory =
+            _searchFocusNode.hasFocus && _searchController.text.isEmpty;
       });
     });
   }
@@ -70,8 +74,9 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     String? lastLabel;
 
     for (var i = 0; i < notifications.length; i++) {
-      final date =
-          DateTime.fromMillisecondsSinceEpoch(notifications[i].timestamp);
+      final date = DateTime.fromMillisecondsSinceEpoch(
+        notifications[i].timestamp,
+      );
       final label = _getDateLabel(date);
       if (label != lastLabel) {
         items.add(label); // String = date header
@@ -83,8 +88,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   }
 
   void _showDetail(NotificationModel notification) {
-    final provider =
-        Provider.of<NotificationProvider>(context, listen: false);
+    final provider = Provider.of<NotificationProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
     provider.markAsRead(notification.id);
 
@@ -104,14 +108,33 @@ class _ArchiveScreenState extends State<ArchiveScreen>
               onStarToggle: () {
                 p.toggleStar(notification.id);
               },
-              onDelete: () {
-                p.deleteNotification(notification.id);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.notificationDeleted)),
-                );
-              },
+              onDelete: () => _deleteWithUndo(p, notification, l10n),
             );
           },
+        ),
+      ),
+    );
+  }
+
+  /// Deletes with a real undo: the row leaves the list now and the database
+  /// only when the snackbar's window closes.
+  void _deleteWithUndo(
+    NotificationProvider provider,
+    NotificationModel notification,
+    AppLocalizations l10n,
+  ) {
+    provider.deleteWithUndo(notification.id);
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(l10n.notificationDeleted),
+        duration: NotificationProvider.undoWindow,
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: l10n.undoAction,
+          textColor: AppColors.accent,
+          onPressed: () => provider.undoDelete(notification.id),
         ),
       ),
     );
@@ -126,7 +149,11 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 18),
+            const Icon(
+              Icons.check_circle_rounded,
+              color: AppColors.success,
+              size: 18,
+            ),
             const SizedBox(width: 8),
             Text(l10n.copiedToClipboard),
           ],
@@ -163,7 +190,10 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                     builder: (context, provider, _) {
                       final count = provider.notifications.length;
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.primaryStart.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(16),
@@ -201,27 +231,33 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                                 icon: const Icon(Icons.clear_rounded, size: 20),
                                 onPressed: () {
                                   _searchController.clear();
-                                  Provider.of<NotificationProvider>(context,
-                                          listen: false)
-                                      .search('');
+                                  Provider.of<NotificationProvider>(
+                                    context,
+                                    listen: false,
+                                  ).search('');
                                   setState(() {
-                                    _showSearchHistory = _searchFocusNode.hasFocus;
+                                    _showSearchHistory =
+                                        _searchFocusNode.hasFocus;
                                   });
                                 },
                               )
                             : null,
                       ),
                       onChanged: (value) {
-                        Provider.of<NotificationProvider>(context, listen: false)
-                            .search(value);
+                        Provider.of<NotificationProvider>(
+                          context,
+                          listen: false,
+                        ).search(value);
                         setState(() {
                           _showSearchHistory = false;
                         });
                       },
                       onSubmitted: (value) {
                         if (value.trim().isNotEmpty) {
-                          Provider.of<SettingsProvider>(context, listen: false)
-                              .addSearchQuery(value.trim());
+                          Provider.of<SettingsProvider>(
+                            context,
+                            listen: false,
+                          ).addSearchQuery(value.trim());
                         }
                       },
                     ),
@@ -235,7 +271,9 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                         decoration: BoxDecoration(
                           color: isActive
                               ? AppColors.primaryStart.withValues(alpha: 0.15)
-                              : (isDark ? AppColors.surfaceLight : AppColors.cardLight),
+                              : (isDark
+                                    ? AppColors.cardDark
+                                    : AppColors.cardLight),
                           borderRadius: BorderRadius.circular(12),
                           border: isActive
                               ? Border.all(color: AppColors.primaryStart)
@@ -294,15 +332,21 @@ class _ArchiveScreenState extends State<ArchiveScreen>
             if (_showSearchHistory)
               Consumer<SettingsProvider>(
                 builder: (context, settings, _) {
-                  if (settings.searchHistory.isEmpty) return const SizedBox.shrink();
+                  if (settings.searchHistory.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
                   return Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16),
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     decoration: BoxDecoration(
-                      color: isDark ? AppColors.surfaceLight : Colors.white,
-                      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                      color: isDark ? AppColors.cardDark : Colors.white,
+                      borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(12),
+                      ),
                       border: Border.all(
-                        color: isDark ? AppColors.cardBorder : AppColors.cardBorderLight,
+                        color: isDark
+                            ? AppColors.cardBorder
+                            : AppColors.cardBorderLight,
                       ),
                       boxShadow: [
                         BoxShadow(
@@ -324,7 +368,9 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: isDark ? AppColors.textTertiary : AppColors.textSecondaryLight,
+                                  color: isDark
+                                      ? AppColors.textTertiary
+                                      : AppColors.textSecondaryLight,
                                 ),
                               ),
                               const Spacer(),
@@ -347,33 +393,45 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                           return InkWell(
                             onTap: () {
                               _searchController.text = query;
-                              Provider.of<NotificationProvider>(context, listen: false)
-                                  .search(query);
+                              Provider.of<NotificationProvider>(
+                                context,
+                                listen: false,
+                              ).search(query);
                               _searchFocusNode.unfocus();
                               setState(() => _showSearchHistory = false);
                             },
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
                               child: Row(
                                 children: [
                                   Icon(
                                     Icons.history_rounded,
                                     size: 16,
-                                    color: isDark ? AppColors.textTertiary : AppColors.textSecondaryLight,
+                                    color: isDark
+                                        ? AppColors.textTertiary
+                                        : AppColors.textSecondaryLight,
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Text(
                                       query,
-                                      style: Theme.of(context).textTheme.bodyMedium,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodyMedium,
                                     ),
                                   ),
                                   GestureDetector(
-                                    onTap: () => settings.removeSearchQuery(query),
+                                    onTap: () =>
+                                        settings.removeSearchQuery(query),
                                     child: Icon(
                                       Icons.close_rounded,
                                       size: 14,
-                                      color: isDark ? AppColors.textTertiary : AppColors.textSecondaryLight,
+                                      color: isDark
+                                          ? AppColors.textTertiary
+                                          : AppColors.textSecondaryLight,
                                     ),
                                   ),
                                 ],
@@ -432,7 +490,20 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                       // New feature A: Recall Radar. Only offered once something
                       // has actually been withdrawn, so it doesn't sit there as a
                       // permanently empty filter.
-                      if (provider.allNotifications.any((n) => n.isRecalled)) ...[
+                      // Photo vault: every kept picture in one place, offered as
+                      // soon as the archive holds at least one.
+                      if (provider.allNotifications.any((n) => n.hasImage)) ...[
+                        _FilterChip(
+                          label: '📷 ${l10n.filterPhotos}',
+                          isSelected: provider.filterMode == 'photos',
+                          color: AppColors.accent,
+                          onTap: () => provider.setFilterMode('photos'),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      if (provider.allNotifications.any(
+                        (n) => n.isRecalled,
+                      )) ...[
                         _FilterChip(
                           label: '↩️ ${l10n.filterRecalled}',
                           isSelected: provider.filterMode == 'recalled',
@@ -448,8 +519,11 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                           child: _FilterChip(
                             label: '#$tag',
                             isSelected: provider.selectedTag == tag,
-                            color: AppColors.tagColors[
-                                provider.allTags.indexOf(tag) % AppColors.tagColors.length],
+                            color:
+                                AppColors.tagColors[provider.allTags.indexOf(
+                                      tag,
+                                    ) %
+                                    AppColors.tagColors.length],
                             onTap: () {
                               provider.filterByTag(
                                 provider.selectedTag == tag ? null : tag,
@@ -459,16 +533,19 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                         );
                       }),
                       // Separator
-                      if (provider.allTags.isNotEmpty && provider.uniqueApps.isNotEmpty)
+                      if (provider.allTags.isNotEmpty &&
+                          provider.uniqueApps.isNotEmpty)
                         Container(
                           margin: const EdgeInsets.symmetric(horizontal: 4),
                           width: 1,
                           height: 24,
-                          color: isDark ? AppColors.cardBorder : AppColors.cardBorderLight,
+                          color: isDark
+                              ? AppColors.cardBorder
+                              : AppColors.cardBorderLight,
                         ),
                       // App filter chips
                       ...provider.uniqueApps.take(5).map((pkg) {
-                        final name = _getAppShortName(pkg);
+                        final name = context.appLabel(pkg);
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: _FilterChip(
@@ -506,31 +583,53 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                   }
 
                   if (provider.notifications.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.inbox_rounded,
-                            size: 64,
-                            color: AppColors.textTertiary,
+                    // Pull-to-refresh has to work exactly here - an empty archive
+                    // is the moment someone wants to check again - so the empty
+                    // state sits inside an always-scrollable view.
+                    return RefreshIndicator(
+                      onRefresh: () =>
+                          provider.fetchNotifications(silent: true),
+                      color: AppColors.primaryStart,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) => SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight,
+                            ),
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.inbox_rounded,
+                                    size: 64,
+                                    color: AppColors.textTertiary,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    l10n.noNotificationsFound,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineSmall
+                                        ?.copyWith(
+                                          color: AppColors.textTertiary,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    provider.searchQuery.isNotEmpty
+                                        ? l10n.tryDifferentSearchTerm
+                                        : l10n.capturedNotificationsAppearHere,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium,
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            l10n.noNotificationsFound,
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineSmall
-                                ?.copyWith(color: AppColors.textTertiary),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            provider.searchQuery.isNotEmpty
-                                ? l10n.tryDifferentSearchTerm
-                                : l10n.capturedNotificationsAppearHere,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
+                        ),
                       ),
                     );
                   }
@@ -542,6 +641,9 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                     color: AppColors.primaryStart,
                     child: ListView.builder(
                       controller: _scrollController,
+                      // Without this a list shorter than the screen cannot scroll,
+                      // so the pull gesture never reaches RefreshIndicator.
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.only(bottom: 100),
                       itemCount: grouped.length,
                       itemBuilder: (context, index) {
@@ -556,21 +658,8 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                             notification: notification,
                             index: index,
                             onTap: () => _showDetail(notification),
-                            onDismissed: () {
-                              provider.deleteNotification(notification.id);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(l10n.notificationDeleted),
-                                  action: SnackBarAction(
-                                    label: l10n.undoAction,
-                                    textColor: AppColors.accent,
-                                    onPressed: () {
-                                      provider.fetchNotifications();
-                                    },
-                                  ),
-                                ),
-                              );
-                            },
+                            onDismissed: () =>
+                                _deleteWithUndo(provider, notification, l10n),
                             onStarToggle: () {
                               provider.toggleStar(notification.id);
                             },
@@ -586,14 +675,6 @@ class _ArchiveScreenState extends State<ArchiveScreen>
         ),
       ),
     );
-  }
-
-  String _getAppShortName(String packageName) {
-    final parts = packageName.split('.');
-    if (parts.length >= 2) {
-      return parts.last[0].toUpperCase() + parts.last.substring(1);
-    }
-    return packageName;
   }
 }
 
@@ -623,7 +704,7 @@ class _FilterChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? activeColor.withValues(alpha: 0.2)
-              : (isDark ? AppColors.surfaceLight : AppColors.cardLight),
+              : (isDark ? AppColors.cardDark : AppColors.cardLight),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
@@ -639,7 +720,9 @@ class _FilterChip extends StatelessWidget {
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
             color: isSelected
                 ? activeColor
-                : (isDark ? AppColors.textSecondary : AppColors.textSecondaryLight),
+                : (isDark
+                      ? AppColors.textSecondary
+                      : AppColors.textSecondaryLight),
           ),
         ),
       ),

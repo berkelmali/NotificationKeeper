@@ -20,6 +20,10 @@ class AppColors {
 
   // Light Theme Colors
   static const Color backgroundLight = Color(0xFFF8FAFC);
+  // NOTE: surfaceLight is the LIGHT theme's white surface, not "a lighter
+  // surface for dark mode". Thirteen dark-theme branches used it that way and
+  // painted white boxes into the dark UI (date button, filter chips, message
+  // box, tag chip). For a raised surface in dark mode use cardDark.
   static const Color surfaceLight = Color(0xFFFFFFFF);
   static const Color cardLight = Color(0xFFF1F5F9);
   static const Color cardBorderLight = Color(0xE2E8F0FF);

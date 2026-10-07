@@ -8,7 +8,12 @@ import com.example.notification_keeper.data.entity.NotificationEntity
 @Dao
 interface NotificationDao {
     @Insert
-    suspend fun insert(notification: NotificationEntity)
+    suspend fun insert(notification: NotificationEntity): Long
+
+    // Photo vault: the picture is attached after the row exists, so a slow or
+    // failing image read can never lose the message itself.
+    @Query("UPDATE notifications SET imagePath = :path WHERE id = :id")
+    suspend fun updateImagePath(id: Long, path: String)
 
     // New feature: bulk insert, used when restoring from a backup file
     @Insert
@@ -60,6 +65,10 @@ interface NotificationDao {
 
     @Query("DELETE FROM notifications")
     suspend fun deleteAll()
+
+    // Photo vault: "delete all photos" keeps every notification, only the pictures go.
+    @Query("UPDATE notifications SET imagePath = NULL WHERE imagePath IS NOT NULL")
+    suspend fun clearAllImagePaths()
 
     @Query("UPDATE notifications SET isStarred = :isStarred WHERE id = :id")
     suspend fun updateStarred(id: Long, isStarred: Boolean)

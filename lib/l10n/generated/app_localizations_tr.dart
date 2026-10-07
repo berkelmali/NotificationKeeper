@@ -732,4 +732,215 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get codeShreddedLabel => 'Kod imha edildi';
+
+  @override
+  String get filterPhotos => 'Fotoğraflar';
+
+  @override
+  String get sectionPhotos => 'Fotoğraflar';
+
+  @override
+  String get capturePhotosTitle => 'Mesajlardaki fotoğrafları sakla';
+
+  @override
+  String get capturePhotosSubtitle =>
+      'Gönderen mesajı silse bile özel bir kopya burada kalır';
+
+  @override
+  String photoStorageUsage(int count, String size) {
+    return '$count fotoğraf · $size';
+  }
+
+  @override
+  String get photoPrivacyNote =>
+      'Kopyalar bu telefonda gizli olarak, küçültülerek ve konum gibi gizli bilgileri temizlenerek saklanır.';
+
+  @override
+  String get deleteAllPhotosTitle => 'Tüm fotoğrafları sil';
+
+  @override
+  String get deleteAllPhotosBody =>
+      'Saklanan tüm fotoğraflar silinecek. Bildirimlerin kendisi arşivde kalır.';
+
+  @override
+  String get photosDeleted => 'Fotoğraflar silindi';
+
+  @override
+  String get photoKeptAfterRecall =>
+      'Gönderen bu mesajı sildi. Fotoğraf hâlâ burada.';
+
+  @override
+  String get sharePhoto => 'Fotoğrafı paylaş';
+
+  @override
+  String get closeAction => 'Kapat';
+
+  @override
+  String get showSystemApps => 'Sistem uygulamalarını göster';
+
+  @override
+  String get vaultLockedTitle => 'Kasa kilitli';
+
+  @override
+  String get vaultEnterPin => 'Kasa PIN\'ini gir';
+
+  @override
+  String get vaultUnlock => 'Aç';
+
+  @override
+  String vaultWrongPin(int count) {
+    return 'Yanlış PIN. $count deneme kaldı';
+  }
+
+  @override
+  String vaultLockedOut(String time) {
+    return 'Çok fazla deneme. $time sonra tekrar dene';
+  }
+
+  @override
+  String get vaultForgotPin => 'PIN\'imi unuttum';
+
+  @override
+  String get vaultForgotPinReason =>
+      'Yeni kasa PIN\'i belirlemek için kimliğini doğrula';
+
+  @override
+  String get vaultBiometricChanged =>
+      'Parmak iziyle açmayı açtığından beri bu telefondaki parmak izleri değişti. Yeniden kullanmak için PIN\'ini gir.';
+
+  @override
+  String get vaultUseFingerprint => 'Parmak izi kullan';
+
+  @override
+  String get vaultBiometricReason => 'Notification Keeper\'ı aç';
+
+  @override
+  String get deleteDigit => 'Sil';
+
+  @override
+  String get vaultSetupTitle => 'Kasa PIN\'ini oluştur';
+
+  @override
+  String get vaultSetupSubtitle =>
+      '4-8 rakam. Arşivi açmak için kullanacaksın.';
+
+  @override
+  String get vaultConfirmTitle => 'Tekrar gir';
+
+  @override
+  String get vaultPinMismatch => 'PIN\'ler eşleşmedi. Tekrar dene.';
+
+  @override
+  String get vaultContinue => 'Devam';
+
+  @override
+  String get vaultBiometricOfferTitle => 'Parmak iziyle açılsın mı?';
+
+  @override
+  String get vaultBiometricOfferBody =>
+      'Bu telefona kayıtlı her parmak izi kasayı açar. Biri yeni bir parmak izi eklerse kasa bunu fark eder ve önce PIN\'ini ister.';
+
+  @override
+  String get vaultBiometricYes => 'Parmak izini kullan';
+
+  @override
+  String get vaultBiometricNo => 'Sadece PIN';
+
+  @override
+  String get vaultNoBiometricEnrolled =>
+      'Bu telefonda henüz kayıtlı parmak izi yok. Android ayarlarından ekleyip geri dön.';
+
+  @override
+  String get vaultAddFingerprint => 'Parmak izi ekle';
+
+  @override
+  String get vaultSetupDone => 'Kasa etkin';
+
+  @override
+  String get vaultLockTitle => 'Kasa kilidi';
+
+  @override
+  String get vaultLockOnSubtitle => 'Arşivi açmak için PIN gerekir';
+
+  @override
+  String get vaultLockOffSubtitle =>
+      'Kilidi açık telefonunu eline alan herkes arşivi açabilir';
+
+  @override
+  String get vaultChangePin => 'PIN\'i değiştir';
+
+  @override
+  String get vaultFingerprintUnlock => 'Parmak iziyle aç';
+
+  @override
+  String get vaultManageFingerprints => 'Parmak izi ekle veya yönet';
+
+  @override
+  String get vaultManageFingerprintsSubtitle =>
+      'Android\'in parmak izi ayarlarını açar. Orada kayıtlı her parmak kasayı açar.';
+
+  @override
+  String get vaultExplainer =>
+      'Parmak izleri Android\'in güvenli donanımından hiç çıkmaz: bu uygulama onları göremez ve saklayamaz. Unutulan PIN telefonun ekran kilidiyle sıfırlanabilir, yani kasa en fazla o ekran kilidi kadar güçlüdür. Arşiv uygulamanın özel deposunda tutulur ve ayrıca şifrelenmez.';
+
+  @override
+  String get vaultConfirmPinTitle => 'Mevcut PIN\'ini gir';
+
+  @override
+  String get vaultPinChanged => 'PIN değiştirildi';
+
+  @override
+  String get vaultTurnedOff => 'Kasa kapatıldı';
+
+  @override
+  String get vaultUpgradeTitle => 'Kasa PIN\'i ekle';
+
+  @override
+  String get vaultUpgradeBody =>
+      'Kilidin şu an telefonun ekran kilidine dayanıyor. Kasaya özel bir PIN daha güçlü.';
+
+  @override
+  String get laterAction => 'Sonra';
+
+  @override
+  String get vaultNewPinTitle => 'Yeni PIN\'ini belirle';
+
+  @override
+  String get vaultUsePin => 'PIN kullan';
+
+  @override
+  String get vaultFingerprintLockedOut =>
+      'Çok fazla parmak izi denemesi. PIN\'ini kullan.';
+
+  @override
+  String get vaultForgotNeedsScreenLock =>
+      'PIN\'i sıfırlamak için telefonun ekran kilidi gerekir ve bu telefonda yok. Önce Android ayarlarından bir ekran kilidi belirle.';
+
+  @override
+  String get appPickerTitle => 'Saklanacak uygulamaları seç';
+
+  @override
+  String get appPickerSubtitle =>
+      'Sohbet uygulamaların ve SMS uygulaman zaten işaretli; mesajlar ve kodlar en baştan saklanır. Bunu istediğin zaman Uygulamalar sekmesinden değiştirebilirsin.';
+
+  @override
+  String get appPickerSuggested => 'Önerilen';
+
+  @override
+  String get appPickerOthers => 'Diğer uygulamalar';
+
+  @override
+  String get appPickerSmsHint =>
+      'SMS uygulaman - doğrulama kodları buraya gelir';
+
+  @override
+  String appPickerKeep(int count) {
+    return '$count uygulamayı sakla';
+  }
+
+  @override
+  String get appPickerNone => 'En az bir uygulama işaretle';
+
+  @override
+  String get appPickerSkip => 'Şimdilik geç';
 }

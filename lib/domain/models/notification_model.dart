@@ -54,6 +54,9 @@ class NotificationModel {
   /// posted it — i.e. the sender most likely deleted the message.
   bool get isRecalled => recalledAt != null;
 
+  /// Photo vault: whether a picture from this notification was kept.
+  bool get hasImage => imagePath != null && imagePath!.isNotEmpty;
+
   /// Get tags as a list
   List<String> get tagList {
     if (tags == null || tags!.isEmpty) return [];

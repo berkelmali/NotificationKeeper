@@ -10,6 +10,11 @@ class AppListProvider extends ChangeNotifier {
   String _searchQuery = '';
   String _viewMode = 'all'; // all, monitored, unmonitored
 
+  // App detection: system packages (navigation-bar overlays, shared libraries
+  // and the like) are hidden unless asked for.
+  bool _showSystemApps = false;
+  bool get showSystemApps => _showSystemApps;
+
   List<AppInfoModel> get apps => _filteredApps;
   List<AppInfoModel> get allApps => _allApps;
   bool get isLoading => _isLoading;
@@ -21,7 +26,7 @@ class AppListProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      _allApps = await _repository.getMonitoredApps();
+      _allApps = await _repository.getMonitoredApps(includeSystem: _showSystemApps);
       _applyFilters();
     } catch (e) {
       debugPrint("Error fetching apps: $e");
@@ -29,6 +34,12 @@ class AppListProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> setShowSystemApps(bool show) async {
+    if (_showSystemApps == show) return;
+    _showSystemApps = show;
+    await fetchApps();
   }
 
   void search(String query) {
@@ -47,14 +58,7 @@ class AppListProvider extends ChangeNotifier {
     // Optimistic update
     final index = _allApps.indexWhere((app) => app.packageName == packageName);
     if (index != -1) {
-      final oldApp = _allApps[index];
-      _allApps[index] = AppInfoModel(
-        packageName: oldApp.packageName,
-        appName: oldApp.appName,
-        isMonitored: isMonitored,
-        notificationCount: oldApp.notificationCount,
-        snoozedUntil: oldApp.snoozedUntil,
-      );
+      _allApps[index] = _allApps[index].copyWith(isMonitored: isMonitored);
       _applyFilters();
       notifyListeners();
     }
@@ -62,14 +66,7 @@ class AppListProvider extends ChangeNotifier {
     final success = await _repository.toggleAppMonitoring(packageName, isMonitored);
     if (!success && index != -1) {
       // Revert if failed
-      final oldApp = _allApps[index];
-      _allApps[index] = AppInfoModel(
-        packageName: oldApp.packageName,
-        appName: oldApp.appName,
-        isMonitored: !isMonitored,
-        notificationCount: oldApp.notificationCount,
-        snoozedUntil: oldApp.snoozedUntil,
-      );
+      _allApps[index] = _allApps[index].copyWith(isMonitored: !isMonitored);
       _applyFilters();
       notifyListeners();
     }
@@ -81,14 +78,7 @@ class AppListProvider extends ChangeNotifier {
     if (success) {
       final index = _allApps.indexWhere((app) => app.packageName == packageName);
       if (index != -1) {
-        final oldApp = _allApps[index];
-        _allApps[index] = AppInfoModel(
-          packageName: oldApp.packageName,
-          appName: oldApp.appName,
-          isMonitored: oldApp.isMonitored,
-          notificationCount: oldApp.notificationCount,
-          snoozedUntil: DateTime.now().add(Duration(minutes: minutes)),
-        );
+        _allApps[index] = _allApps[index].copyWith(snoozedUntil: DateTime.now().add(Duration(minutes: minutes)));
         _applyFilters();
         notifyListeners();
       }
@@ -100,14 +90,7 @@ class AppListProvider extends ChangeNotifier {
     if (success) {
       final index = _allApps.indexWhere((app) => app.packageName == packageName);
       if (index != -1) {
-        final oldApp = _allApps[index];
-        _allApps[index] = AppInfoModel(
-          packageName: oldApp.packageName,
-          appName: oldApp.appName,
-          isMonitored: oldApp.isMonitored,
-          notificationCount: oldApp.notificationCount,
-          snoozedUntil: null,
-        );
+        _allApps[index] = _allApps[index].copyWith(clearSnooze: true);
         _applyFilters();
         notifyListeners();
       }
@@ -118,19 +101,27 @@ class AppListProvider extends ChangeNotifier {
     for (var i = 0; i < _allApps.length; i++) {
       final app = _allApps[i];
       if (app.isMonitored != isMonitored) {
-        _allApps[i] = AppInfoModel(
-          packageName: app.packageName,
-          appName: app.appName,
-          isMonitored: isMonitored,
-          notificationCount: app.notificationCount,
-          snoozedUntil: app.snoozedUntil,
-        );
+        _allApps[i] = app.copyWith(isMonitored: isMonitored);
         // Fire and forget
         _repository.toggleAppMonitoring(app.packageName, isMonitored);
       }
     }
     _applyFilters();
     notifyListeners();
+  }
+
+  /// Starts monitoring every app in [packages] (the first-run picker), and
+  /// waits until each is saved, so the listener keeps their next notification.
+  Future<void> monitorApps(Iterable<String> packages) async {
+    final wanted = packages.toSet();
+    for (var i = 0; i < _allApps.length; i++) {
+      if (wanted.contains(_allApps[i].packageName) && !_allApps[i].isMonitored) {
+        _allApps[i] = _allApps[i].copyWith(isMonitored: true);
+      }
+    }
+    _applyFilters();
+    notifyListeners();
+    await Future.wait(wanted.map((p) => _repository.toggleAppMonitoring(p, true)));
   }
 
   void _applyFilters() {

@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
+/// Typography uses the platform font (Roboto on Android).
+///
+/// This used to be google_fonts' Inter, fetched at runtime from
+/// fonts.gstatic.com. Release builds have no INTERNET permission, so on a
+/// real phone the fetch failed on every launch - logging an unhandled
+/// exception - and Inter never loaded; users always saw the fallback. Debug
+/// builds did reach Google's servers, which contradicts the app's
+/// "no external servers" promise. Dropping it changes nothing users have
+/// ever seen and removes the only network call the app made.
 class AppTheme {
   AppTheme._();
 
@@ -17,7 +25,7 @@ class AppTheme {
         surface: AppColors.surfaceLight,
         error: AppColors.error,
       ),
-      textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme),
+      textTheme: ThemeData.light().textTheme,
       cardTheme: const CardThemeData(
         color: AppColors.surfaceLight,
         elevation: 0,
@@ -37,7 +45,7 @@ class AppTheme {
         surface: AppColors.surfaceDark,
         error: AppColors.error,
       ),
-      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+      textTheme: ThemeData.dark().textTheme,
       cardTheme: const CardThemeData(
         color: AppColors.surfaceDark,
         elevation: 0,

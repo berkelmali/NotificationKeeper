@@ -145,7 +145,7 @@ class _AppsScreenState extends State<AppsScreen>
                               ? AppColors.textSecondary
                               : AppColors.textSecondaryLight,
                         ),
-                        color: isDark ? AppColors.surfaceLight : Colors.white,
+                        color: isDark ? AppColors.cardDark : Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -154,6 +154,8 @@ class _AppsScreenState extends State<AppsScreen>
                             provider.setAllMonitored(true);
                           } else if (value == 'deselect_all') {
                             provider.setAllMonitored(false);
+                          } else if (value == 'system_apps') {
+                            provider.setShowSystemApps(!provider.showSystemApps);
                           }
                         },
                         itemBuilder: (context) => [
@@ -176,6 +178,12 @@ class _AppsScreenState extends State<AppsScreen>
                                 Text(l10n.deselectAllAction),
                               ],
                             ),
+                          ),
+                          const PopupMenuDivider(),
+                          CheckedPopupMenuItem(
+                            value: 'system_apps',
+                            checked: provider.showSystemApps,
+                            child: Text(l10n.showSystemApps),
                           ),
                         ],
                       ),
@@ -384,7 +392,7 @@ class _ViewModeChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primaryStart.withValues(alpha: 0.2)
-              : (isDark ? AppColors.surfaceLight : AppColors.cardLight),
+              : (isDark ? AppColors.cardDark : AppColors.cardLight),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected

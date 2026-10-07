@@ -201,4 +201,22 @@ void main() {
       expect(notified, greaterThan(0));
     });
   });
+
+  group('Photo vault', () {
+    test('keeps photos by default, because the user asked for exactly that', () async {
+      final settings = SettingsProvider();
+      await settings.loadSettings();
+      expect(settings.capturePhotos, true);
+    });
+
+    test('turning it off persists across a restart', () async {
+      final settings = SettingsProvider();
+      await settings.loadSettings();
+      await settings.setCapturePhotos(false);
+
+      final reloaded = SettingsProvider();
+      await reloaded.loadSettings();
+      expect(reloaded.capturePhotos, false);
+    });
+  });
 }

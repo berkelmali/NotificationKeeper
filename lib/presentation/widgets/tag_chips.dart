@@ -81,7 +81,7 @@ class TagChips extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: isDark
-                    ? AppColors.surfaceLight
+                    ? AppColors.cardDark
                     : AppColors.cardLight,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(

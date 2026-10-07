@@ -1393,6 +1393,378 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Code shredded'**
   String get codeShreddedLabel;
+
+  /// No description provided for @filterPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos'**
+  String get filterPhotos;
+
+  /// No description provided for @sectionPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos'**
+  String get sectionPhotos;
+
+  /// No description provided for @capturePhotosTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep photos from messages'**
+  String get capturePhotosTitle;
+
+  /// No description provided for @capturePhotosSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A private copy stays here even if the sender deletes the message'**
+  String get capturePhotosSubtitle;
+
+  /// No description provided for @photoStorageUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} photos · {size}'**
+  String photoStorageUsage(int count, String size);
+
+  /// No description provided for @photoPrivacyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved copies are stored privately on this phone, resized, with location and other hidden data removed.'**
+  String get photoPrivacyNote;
+
+  /// No description provided for @deleteAllPhotosTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all photos'**
+  String get deleteAllPhotosTitle;
+
+  /// No description provided for @deleteAllPhotosBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Every stored photo will be removed. The notifications themselves stay in the archive.'**
+  String get deleteAllPhotosBody;
+
+  /// No description provided for @photosDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos deleted'**
+  String get photosDeleted;
+
+  /// No description provided for @photoKeptAfterRecall.
+  ///
+  /// In en, this message translates to:
+  /// **'The sender deleted this message. The photo is still here.'**
+  String get photoKeptAfterRecall;
+
+  /// No description provided for @sharePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Share photo'**
+  String get sharePhoto;
+
+  /// No description provided for @closeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get closeAction;
+
+  /// No description provided for @showSystemApps.
+  ///
+  /// In en, this message translates to:
+  /// **'Show system apps'**
+  String get showSystemApps;
+
+  /// No description provided for @vaultLockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Vault locked'**
+  String get vaultLockedTitle;
+
+  /// No description provided for @vaultEnterPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your vault PIN'**
+  String get vaultEnterPin;
+
+  /// No description provided for @vaultUnlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock'**
+  String get vaultUnlock;
+
+  /// No description provided for @vaultWrongPin.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Wrong PIN. 1 attempt left} other{Wrong PIN. {count} attempts left}}'**
+  String vaultWrongPin(int count);
+
+  /// No description provided for @vaultLockedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Try again in {time}'**
+  String vaultLockedOut(String time);
+
+  /// No description provided for @vaultForgotPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot PIN?'**
+  String get vaultForgotPin;
+
+  /// No description provided for @vaultForgotPinReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm it\'s you to set a new vault PIN'**
+  String get vaultForgotPinReason;
+
+  /// No description provided for @vaultBiometricChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'The fingerprints on this phone changed since you turned on fingerprint unlock. Enter your PIN to use them again.'**
+  String get vaultBiometricChanged;
+
+  /// No description provided for @vaultUseFingerprint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use fingerprint'**
+  String get vaultUseFingerprint;
+
+  /// No description provided for @vaultBiometricReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock Notification Keeper'**
+  String get vaultBiometricReason;
+
+  /// No description provided for @deleteDigit.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get deleteDigit;
+
+  /// No description provided for @vaultSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your vault PIN'**
+  String get vaultSetupTitle;
+
+  /// No description provided for @vaultSetupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'4 to 8 digits. You will use it to open the archive.'**
+  String get vaultSetupSubtitle;
+
+  /// No description provided for @vaultConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter it again'**
+  String get vaultConfirmTitle;
+
+  /// No description provided for @vaultPinMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The PINs did not match. Try again.'**
+  String get vaultPinMismatch;
+
+  /// No description provided for @vaultContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get vaultContinue;
+
+  /// No description provided for @vaultBiometricOfferTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock with fingerprint?'**
+  String get vaultBiometricOfferTitle;
+
+  /// No description provided for @vaultBiometricOfferBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Every fingerprint saved on this phone will open the vault. If someone adds a new one, the vault notices and asks for your PIN first.'**
+  String get vaultBiometricOfferBody;
+
+  /// No description provided for @vaultBiometricYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Use fingerprint'**
+  String get vaultBiometricYes;
+
+  /// No description provided for @vaultBiometricNo.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN only'**
+  String get vaultBiometricNo;
+
+  /// No description provided for @vaultNoBiometricEnrolled.
+  ///
+  /// In en, this message translates to:
+  /// **'No fingerprint is saved on this phone yet. Add one in Android settings, then come back.'**
+  String get vaultNoBiometricEnrolled;
+
+  /// No description provided for @vaultAddFingerprint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a fingerprint'**
+  String get vaultAddFingerprint;
+
+  /// No description provided for @vaultSetupDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Vault is on'**
+  String get vaultSetupDone;
+
+  /// No description provided for @vaultLockTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Vault lock'**
+  String get vaultLockTitle;
+
+  /// No description provided for @vaultLockOnSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A PIN is needed to open the archive'**
+  String get vaultLockOnSubtitle;
+
+  /// No description provided for @vaultLockOffSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Anyone holding your unlocked phone can open the archive'**
+  String get vaultLockOffSubtitle;
+
+  /// No description provided for @vaultChangePin.
+  ///
+  /// In en, this message translates to:
+  /// **'Change PIN'**
+  String get vaultChangePin;
+
+  /// No description provided for @vaultFingerprintUnlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock with fingerprint'**
+  String get vaultFingerprintUnlock;
+
+  /// No description provided for @vaultManageFingerprints.
+  ///
+  /// In en, this message translates to:
+  /// **'Add or manage fingerprints'**
+  String get vaultManageFingerprints;
+
+  /// No description provided for @vaultManageFingerprintsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Opens Android\'s fingerprint settings. Every finger saved there unlocks the vault.'**
+  String get vaultManageFingerprintsSubtitle;
+
+  /// No description provided for @vaultExplainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Fingerprints never leave Android\'s secure hardware: this app cannot see or store them. A forgotten PIN can be reset with the phone\'s screen lock, so the vault is as strong as that screen lock. The archive is kept in the app\'s private storage and is not separately encrypted.'**
+  String get vaultExplainer;
+
+  /// No description provided for @vaultConfirmPinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your current PIN'**
+  String get vaultConfirmPinTitle;
+
+  /// No description provided for @vaultPinChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN changed'**
+  String get vaultPinChanged;
+
+  /// No description provided for @vaultTurnedOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Vault turned off'**
+  String get vaultTurnedOff;
+
+  /// No description provided for @vaultUpgradeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a vault PIN'**
+  String get vaultUpgradeTitle;
+
+  /// No description provided for @vaultUpgradeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your lock currently relies on the phone\'s screen lock. A PIN of the vault\'s own is stronger.'**
+  String get vaultUpgradeBody;
+
+  /// No description provided for @laterAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get laterAction;
+
+  /// No description provided for @vaultNewPinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a new PIN'**
+  String get vaultNewPinTitle;
+
+  /// No description provided for @vaultUsePin.
+  ///
+  /// In en, this message translates to:
+  /// **'Use PIN'**
+  String get vaultUsePin;
+
+  /// No description provided for @vaultFingerprintLockedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many fingerprint tries. Use your PIN.'**
+  String get vaultFingerprintLockedOut;
+
+  /// No description provided for @vaultForgotNeedsScreenLock.
+  ///
+  /// In en, this message translates to:
+  /// **'Resetting the PIN needs your phone\'s screen lock, and this phone has none. Set one in Android settings first.'**
+  String get vaultForgotNeedsScreenLock;
+
+  /// No description provided for @appPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the apps to keep'**
+  String get appPickerTitle;
+
+  /// No description provided for @appPickerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat apps and your SMS app are already ticked, so messages and codes are kept from the start. You can change this any time under Apps.'**
+  String get appPickerSubtitle;
+
+  /// No description provided for @appPickerSuggested.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested'**
+  String get appPickerSuggested;
+
+  /// No description provided for @appPickerOthers.
+  ///
+  /// In en, this message translates to:
+  /// **'Other apps'**
+  String get appPickerOthers;
+
+  /// No description provided for @appPickerSmsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your SMS app - verification codes arrive here'**
+  String get appPickerSmsHint;
+
+  /// No description provided for @appPickerKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Keep 1 app} other{Keep {count} apps}}'**
+  String appPickerKeep(int count);
+
+  /// No description provided for @appPickerNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Tick at least one app'**
+  String get appPickerNone;
+
+  /// No description provided for @appPickerSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip for now'**
+  String get appPickerSkip;
 }
 
 class _AppLocalizationsDelegate

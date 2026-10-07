@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import 'app_icon_widget.dart';
 import 'glass_card.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../providers/app_registry.dart';
 
 class NotificationCard extends StatelessWidget {
   final NotificationModel notification;
@@ -24,13 +25,6 @@ class NotificationCard extends StatelessWidget {
     this.index = 0,
   });
 
-  String _getAppShortName(String packageName) {
-    final parts = packageName.split('.');
-    if (parts.length >= 2) {
-      return parts.last[0].toUpperCase() + parts.last.substring(1);
-    }
-    return packageName;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +46,7 @@ class NotificationCard extends StatelessWidget {
       timeStr = DateFormat.MMMd(Localizations.localeOf(context).toString()).format(date);
     }
 
-    final appName = _getAppShortName(notification.packageName);
+    final appName = context.appLabel(notification.packageName);
     final hasTags = notification.tagList.isNotEmpty;
 
     Widget card = GlassCard(
@@ -320,20 +314,77 @@ class NotificationCard extends StatelessWidget {
       );
     }
 
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 300 + (index * 50).clamp(0, 300)),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, 20 * (1 - value)),
-            child: child,
-          ),
-        );
-      },
-      child: card,
+    return _EntryAnimation(id: notification.id, index: index, child: card);
+  }
+}
+
+/// Fades and lifts a card in - once.
+///
+/// The previous TweenAnimationBuilder restarted every time ListView.builder
+/// rebuilt the card, so scrolling back up replayed the fade on cards the user
+/// had already seen; and its "stagger" only varied the duration, so every card
+/// started at the same moment. Cards now animate the first time they appear,
+/// with a real per-card delay for the first screenful, and not at all when the
+/// system asks for reduced motion.
+class _EntryAnimation extends StatefulWidget {
+  final int id;
+  final int index;
+  final Widget child;
+
+  const _EntryAnimation({required this.id, required this.index, required this.child});
+
+  /// Ids that have already played, shared across the app's lifetime.
+  static final Set<int> _played = {};
+
+  @override
+  State<_EntryAnimation> createState() => _EntryAnimationState();
+}
+
+class _EntryAnimationState extends State<_EntryAnimation>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 320),
+  );
+  late final Animation<double> _curve =
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_controller.isAnimating || _controller.value > 0) return;
+    final firstTime = _EntryAnimation._played.add(widget.id);
+    if (!firstTime || MediaQuery.of(context).disableAnimations) {
+      _controller.value = 1;
+      return;
+    }
+    // Stagger only the first screenful; anything further down appears as it
+    // is scrolled to, with no extra wait.
+    final delay = Duration(milliseconds: 40 * widget.index.clamp(0, 8));
+    Future.delayed(delay, () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // FadeTransition fades without rebuilding; only the small translate does.
+    return FadeTransition(
+      opacity: _curve,
+      child: AnimatedBuilder(
+        animation: _curve,
+        child: widget.child,
+        builder: (context, child) => Transform.translate(
+          offset: Offset(0, 16 * (1 - _curve.value)),
+          child: child,
+        ),
+      ),
     );
   }
 }

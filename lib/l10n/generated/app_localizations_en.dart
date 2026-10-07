@@ -733,4 +733,226 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get codeShreddedLabel => 'Code shredded';
+
+  @override
+  String get filterPhotos => 'Photos';
+
+  @override
+  String get sectionPhotos => 'Photos';
+
+  @override
+  String get capturePhotosTitle => 'Keep photos from messages';
+
+  @override
+  String get capturePhotosSubtitle =>
+      'A private copy stays here even if the sender deletes the message';
+
+  @override
+  String photoStorageUsage(int count, String size) {
+    return '$count photos · $size';
+  }
+
+  @override
+  String get photoPrivacyNote =>
+      'Saved copies are stored privately on this phone, resized, with location and other hidden data removed.';
+
+  @override
+  String get deleteAllPhotosTitle => 'Delete all photos';
+
+  @override
+  String get deleteAllPhotosBody =>
+      'Every stored photo will be removed. The notifications themselves stay in the archive.';
+
+  @override
+  String get photosDeleted => 'Photos deleted';
+
+  @override
+  String get photoKeptAfterRecall =>
+      'The sender deleted this message. The photo is still here.';
+
+  @override
+  String get sharePhoto => 'Share photo';
+
+  @override
+  String get closeAction => 'Close';
+
+  @override
+  String get showSystemApps => 'Show system apps';
+
+  @override
+  String get vaultLockedTitle => 'Vault locked';
+
+  @override
+  String get vaultEnterPin => 'Enter your vault PIN';
+
+  @override
+  String get vaultUnlock => 'Unlock';
+
+  @override
+  String vaultWrongPin(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Wrong PIN. $count attempts left',
+      one: 'Wrong PIN. 1 attempt left',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String vaultLockedOut(String time) {
+    return 'Too many attempts. Try again in $time';
+  }
+
+  @override
+  String get vaultForgotPin => 'Forgot PIN?';
+
+  @override
+  String get vaultForgotPinReason => 'Confirm it\'s you to set a new vault PIN';
+
+  @override
+  String get vaultBiometricChanged =>
+      'The fingerprints on this phone changed since you turned on fingerprint unlock. Enter your PIN to use them again.';
+
+  @override
+  String get vaultUseFingerprint => 'Use fingerprint';
+
+  @override
+  String get vaultBiometricReason => 'Unlock Notification Keeper';
+
+  @override
+  String get deleteDigit => 'Delete';
+
+  @override
+  String get vaultSetupTitle => 'Create your vault PIN';
+
+  @override
+  String get vaultSetupSubtitle =>
+      '4 to 8 digits. You will use it to open the archive.';
+
+  @override
+  String get vaultConfirmTitle => 'Enter it again';
+
+  @override
+  String get vaultPinMismatch => 'The PINs did not match. Try again.';
+
+  @override
+  String get vaultContinue => 'Continue';
+
+  @override
+  String get vaultBiometricOfferTitle => 'Unlock with fingerprint?';
+
+  @override
+  String get vaultBiometricOfferBody =>
+      'Every fingerprint saved on this phone will open the vault. If someone adds a new one, the vault notices and asks for your PIN first.';
+
+  @override
+  String get vaultBiometricYes => 'Use fingerprint';
+
+  @override
+  String get vaultBiometricNo => 'PIN only';
+
+  @override
+  String get vaultNoBiometricEnrolled =>
+      'No fingerprint is saved on this phone yet. Add one in Android settings, then come back.';
+
+  @override
+  String get vaultAddFingerprint => 'Add a fingerprint';
+
+  @override
+  String get vaultSetupDone => 'Vault is on';
+
+  @override
+  String get vaultLockTitle => 'Vault lock';
+
+  @override
+  String get vaultLockOnSubtitle => 'A PIN is needed to open the archive';
+
+  @override
+  String get vaultLockOffSubtitle =>
+      'Anyone holding your unlocked phone can open the archive';
+
+  @override
+  String get vaultChangePin => 'Change PIN';
+
+  @override
+  String get vaultFingerprintUnlock => 'Unlock with fingerprint';
+
+  @override
+  String get vaultManageFingerprints => 'Add or manage fingerprints';
+
+  @override
+  String get vaultManageFingerprintsSubtitle =>
+      'Opens Android\'s fingerprint settings. Every finger saved there unlocks the vault.';
+
+  @override
+  String get vaultExplainer =>
+      'Fingerprints never leave Android\'s secure hardware: this app cannot see or store them. A forgotten PIN can be reset with the phone\'s screen lock, so the vault is as strong as that screen lock. The archive is kept in the app\'s private storage and is not separately encrypted.';
+
+  @override
+  String get vaultConfirmPinTitle => 'Enter your current PIN';
+
+  @override
+  String get vaultPinChanged => 'PIN changed';
+
+  @override
+  String get vaultTurnedOff => 'Vault turned off';
+
+  @override
+  String get vaultUpgradeTitle => 'Add a vault PIN';
+
+  @override
+  String get vaultUpgradeBody =>
+      'Your lock currently relies on the phone\'s screen lock. A PIN of the vault\'s own is stronger.';
+
+  @override
+  String get laterAction => 'Later';
+
+  @override
+  String get vaultNewPinTitle => 'Choose a new PIN';
+
+  @override
+  String get vaultUsePin => 'Use PIN';
+
+  @override
+  String get vaultFingerprintLockedOut =>
+      'Too many fingerprint tries. Use your PIN.';
+
+  @override
+  String get vaultForgotNeedsScreenLock =>
+      'Resetting the PIN needs your phone\'s screen lock, and this phone has none. Set one in Android settings first.';
+
+  @override
+  String get appPickerTitle => 'Pick the apps to keep';
+
+  @override
+  String get appPickerSubtitle =>
+      'Chat apps and your SMS app are already ticked, so messages and codes are kept from the start. You can change this any time under Apps.';
+
+  @override
+  String get appPickerSuggested => 'Suggested';
+
+  @override
+  String get appPickerOthers => 'Other apps';
+
+  @override
+  String get appPickerSmsHint =>
+      'Your SMS app - verification codes arrive here';
+
+  @override
+  String appPickerKeep(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Keep $count apps',
+      one: 'Keep 1 app',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get appPickerNone => 'Tick at least one app';
+
+  @override
+  String get appPickerSkip => 'Skip for now';
 }

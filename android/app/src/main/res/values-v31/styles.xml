@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ draws its own splash (the launcher icon on a solid colour)
+         before LaunchTheme's window background is ever shown. Without this it
+         used the light system colour: a white flash before the dark app. -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/app_background</item>
+        <!-- The launcher icon is a legacy (non-adaptive) bitmap, which the system
+             would otherwise sit on a light circle. -->
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/app_background</item>
+    </style>
+    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@color/app_background</item>
+    </style>
+</resources>

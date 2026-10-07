@@ -2,19 +2,27 @@ package com.example.notification_keeper.app
 
 import android.content.Intent
 import android.content.SharedPreferences
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.provider.Telephony
 import androidx.core.app.NotificationManagerCompat
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.notification_keeper.apps.AppCatalog
 import com.example.notification_keeper.data.database.AppDatabase
 import com.example.notification_keeper.data.entity.AppPreferenceEntity
 import com.example.notification_keeper.data.entity.NotificationEntity
+import com.example.notification_keeper.service.NotificationImageStore
+import com.example.notification_keeper.service.NotificationEvents
+import com.example.notification_keeper.service.NotificationListener
+import com.example.notification_keeper.vault.BiometricGuard
 import com.example.notification_keeper.worker.CodeShredWorker
 import com.example.notification_keeper.worker.CodeShredder
 import com.example.notification_keeper.worker.RetentionWorker
@@ -76,6 +84,10 @@ class MainActivity: FlutterFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         
+        // Live updates: the listener service pushes "the archive changed" here.
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, NotificationEvents.CHANNEL)
+            .setStreamHandler(NotificationEvents.streamHandler)
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "getAllNotifications" -> {
@@ -414,32 +426,42 @@ class MainActivity: FlutterFragmentActivity() {
                     }
                 }
                 "getMonitoredApps" -> {
+                    // App detection: by default only the apps a person thinks of as
+                    // apps - launcher entries - plus anything already monitored or
+                    // already in the archive. The unfiltered list (~250 packages on
+                    // stock Android, led by navigation-bar overlays) is still there
+                    // behind includeSystem for the rare app without a launcher icon.
+                    val includeSystem = call.argument<Boolean>("includeSystem") ?: false
                     scope.launch(Dispatchers.IO) {
                         try {
                             val db = AppDatabase.getDatabase(applicationContext)
-                            val pm = packageManager
-                            val installed = pm.getInstalledPackages(0)
-                            
-                            val notifCounts = db.notificationDao().getCountByApp()
-                            val countMap = notifCounts.associate { it.packageName to it.count }
+                            val catalog = AppCatalog(applicationContext)
+                            val launchable = catalog.launchablePackages()
+                            val countMap = db.notificationDao().getCountByApp()
+                                .associate { it.packageName to it.count }
+                            val prefsMap = db.appPreferenceDao().getAll().associateBy { it.packageName }
 
-                            // New feature: fetch all preferences (including snooze) in one query
-                            val allPrefs = db.appPreferenceDao().getAll()
-                            val prefsMap = allPrefs.associateBy { it.packageName }
-                            
-                            val appList = installed.map { pkg ->
-                                val pref = prefsMap[pkg.packageName]
-                                val isMonitored = pref?.isMonitored ?: false
-                                val label = pkg.applicationInfo?.loadLabel(pm)?.toString() ?: pkg.packageName
-                                mapOf(
-                                    "packageName" to pkg.packageName,
-                                    "appName" to label,
-                                    "isMonitored" to isMonitored,
-                                    "notificationCount" to (countMap[pkg.packageName] ?: 0),
-                                    "snoozedUntil" to pref?.snoozedUntil
-                                )
-                            }.sortedBy { (it["appName"] as String).lowercase() }
-                            
+                            val appList = catalog.installedApplications()
+                                .filter { info ->
+                                    includeSystem ||
+                                        info.packageName in launchable ||
+                                        prefsMap[info.packageName]?.isMonitored == true ||
+                                        (countMap[info.packageName] ?: 0) > 0
+                                }
+                                .map { info ->
+                                    val pref = prefsMap[info.packageName]
+                                    mapOf(
+                                        "packageName" to info.packageName,
+                                        "appName" to catalog.label(info),
+                                        "isMonitored" to (pref?.isMonitored ?: false),
+                                        "notificationCount" to (countMap[info.packageName] ?: 0),
+                                        "snoozedUntil" to pref?.snoozedUntil,
+                                        "isSystem" to catalog.isSystem(info),
+                                        "isLaunchable" to (info.packageName in launchable)
+                                    )
+                                }
+                                .sortedBy { (it["appName"] as String).lowercase() }
+
                             withContext(Dispatchers.Main) {
                                 result.success(appList)
                             }
@@ -449,6 +471,22 @@ class MainActivity: FlutterFragmentActivity() {
                             }
                         }
                     }
+                }
+                "getAppIdentities" -> {
+                    // Real name + real icon for a batch of packages, for every place
+                    // the UI shows an app (archive cards, filters, dashboard, codes).
+                    val packages = call.argument<List<String>>("packages") ?: emptyList()
+                    val iconSize = call.argument<Number>("iconSize")?.toInt() ?: 128
+                    scope.launch(Dispatchers.IO) {
+                        val catalog = AppCatalog(applicationContext)
+                        val identities = packages.distinct().map { catalog.identity(it, iconSize) }
+                        withContext(Dispatchers.Main) { result.success(identities) }
+                    }
+                }
+                // The phone's own SMS app, whatever its brand - suggested at
+                // first run, since that is where verification codes arrive.
+                "getDefaultSmsPackage" -> {
+                    result.success(Telephony.Sms.getDefaultSmsPackage(this))
                 }
                 "toggleAppMonitoring" -> {
                     val packageName = call.argument<String>("packageName")
@@ -561,6 +599,72 @@ class MainActivity: FlutterFragmentActivity() {
                 "getInstantAlertsEnabled" -> {
                     val prefs = getSharedPreferences("notification_keeper_prefs", MODE_PRIVATE)
                     result.success(prefs.getBoolean("instant_alerts_enabled", true))
+                }
+                // --- Vault: fingerprint unlock, its key, and fingerprint enrollment ---
+                "biometricGuardCreate" -> {
+                    scope.launch(Dispatchers.IO) {
+                        val ok = BiometricGuard.create()
+                        withContext(Dispatchers.Main) { result.success(ok) }
+                    }
+                }
+                "biometricStatus" -> {
+                    result.success(BiometricGuard.status(this))
+                }
+                "biometricUnlock" -> {
+                    BiometricGuard.unlock(
+                        this,
+                        title = call.argument<String>("title") ?: "",
+                        subtitle = call.argument<String>("subtitle"),
+                        cancel = call.argument<String>("cancel") ?: "",
+                    ) { outcome -> result.success(outcome) }
+                }
+                // Keeps the archive out of the app switcher's thumbnail while
+                // the vault is on. Android 13+ only; screenshots stay allowed.
+                "setRecentsPreviewHidden" -> {
+                    val hidden = call.argument<Boolean>("hidden") ?: false
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        setRecentsScreenshotEnabled(!hidden)
+                    }
+                    result.success(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                }
+                "biometricGuardDelete" -> {
+                    BiometricGuard.delete()
+                    result.success(true)
+                }
+                "openBiometricEnrollment" -> {
+                    result.success(BiometricGuard.openEnrollment(this))
+                }
+                // --- Photo vault ---
+                "setCapturePhotos" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: true
+                    getSharedPreferences("notification_keeper_prefs", MODE_PRIVATE).edit()
+                        .putBoolean(NotificationListener.PREF_CAPTURE_PHOTOS, enabled).apply()
+                    result.success(true)
+                }
+                "getCapturePhotos" -> {
+                    result.success(
+                        getSharedPreferences("notification_keeper_prefs", MODE_PRIVATE)
+                            .getBoolean(NotificationListener.PREF_CAPTURE_PHOTOS, true)
+                    )
+                }
+                "getPhotoStorageStats" -> {
+                    scope.launch(Dispatchers.IO) {
+                        val (count, bytes) = NotificationImageStore(applicationContext).stats()
+                        withContext(Dispatchers.Main) {
+                            result.success(mapOf("count" to count, "bytes" to bytes))
+                        }
+                    }
+                }
+                "deleteAllPhotos" -> {
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            NotificationImageStore(applicationContext).deleteAll()
+                            AppDatabase.getDatabase(applicationContext).notificationDao().clearAllImagePaths()
+                            withContext(Dispatchers.Main) { result.success(true) }
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) { result.error("DB_ERROR", e.message, null) }
+                        }
+                    }
                 }
                 // --- New feature B: Code Shredder ---
                 "setOtpShredMinutes" -> {
